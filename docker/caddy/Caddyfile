@@ -1,7 +1,3 @@
-{
-	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-}
-
 homelab.rida.dev {
 	reverse_proxy localhost:80
 }
