@@ -13,6 +13,8 @@ services:
       - ./caddy_data:/data
       - ./caddy_config:/config
     network_mode: "host"
+    env_file:
+      - .env
 
 networks:
   caddy_network:
