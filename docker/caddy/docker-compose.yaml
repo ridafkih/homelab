@@ -1,20 +1,17 @@
-version: '3.8'
-
 services:
   caddy:
-    image: caddy:latest
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
     container_name: caddy
     restart: unless-stopped
+    network_mode: host
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./site:/srv
       - ./caddy_data:/data
       - ./caddy_config:/config
-    network_mode: "host"
-
-networks:
-  caddy_network:
-    external: false
+    env_file:
+      - .env
 
