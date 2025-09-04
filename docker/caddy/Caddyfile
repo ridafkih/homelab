@@ -1,0 +1,4 @@
+jellyfin.homelab {
+	reverse_proxy homelab:8096
+}
+
