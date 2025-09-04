@@ -12,8 +12,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy_data:/data
       - ./caddy_config:/config
-    networks:
-      - caddy_network
+    network_mode: "host"
 
 networks:
   caddy_network:
