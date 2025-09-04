@@ -1,4 +1,12 @@
+homelab.rida.dev {
+	reverse_proxy localhost:80
+}
+
 jellyfin.homelab {
-	reverse_proxy homelab:8096
+	reverse_proxy localhost:8096
+}
+
+jellyfin.rida.dev {
+	reverse_proxy localhost:8096
 }
 
