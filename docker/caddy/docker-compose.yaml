@@ -17,15 +17,13 @@ services:
   tailscale-sidecar:
     image: tailscale/tailscale:latest
     container_name: tailscale-sidecar
-    hostname: homelab-docker
+    hostname: tailscale-sidecar
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_HOSTNAME=homelab-docker
+    env_file:
+      - .env
     volumes:
       - ./.tailscale:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
