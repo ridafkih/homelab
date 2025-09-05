@@ -3,13 +3,18 @@ services:
     image: ollama/ollama:latest
     container_name: ollama
     restart: unless-stopped
-    network_mode: host
     volumes:
       - ollama:/root/.ollama
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - homelab-network
 
 volumes:
   ollama:
+
+networks:
+  homelab-network:
+    external: true

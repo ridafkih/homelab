@@ -3,7 +3,6 @@ services:
     image: ghcr.io/caddybuilds/caddy-cloudflare:latest
     container_name: caddy
     restart: unless-stopped
-    network_mode: host
     ports:
       - "80:80"
       - "443:443"
@@ -14,3 +13,9 @@ services:
       - ./caddy_config:/config
     env_file:
       - .env
+    networks:
+      - homelab-network
+
+networks:
+  homelab-network:
+    external: true

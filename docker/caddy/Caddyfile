@@ -13,12 +13,12 @@ jellyfin.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
-    reverse_proxy localhost:8096
+    reverse_proxy jellyfin:8096
 }
 
 ollama.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
-    reverse_proxy localhost:11434
+    reverse_proxy ollama:11434
 }
