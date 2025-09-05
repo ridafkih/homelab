@@ -1,5 +1,8 @@
 {
     email homelab-caddy@rida.dev
+    servers {
+        trusted_proxies 100.64.0.0/10 172.20.0.0/16
+    }
 }
 
 jellyfin.homelab.rida.dev {

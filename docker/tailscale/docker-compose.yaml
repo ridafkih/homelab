@@ -1,0 +1,26 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-router
+    hostname: homelab-docker
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--advertise-routes=172.20.0.0/16 --accept-dns=false
+      - TS_HOSTNAME=homelab-docker
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      - homelab-network
+
+volumes:
+  tailscale-state:
+
+networks:
+  homelab-network:
+    external: true
