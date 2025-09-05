@@ -2,13 +2,6 @@
     email homelab-caddy@rida.dev
 }
 
-homelab.rida.dev {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
-    reverse_proxy localhost:80
-}
-
 jellyfin.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
