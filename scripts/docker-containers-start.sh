@@ -8,7 +8,7 @@ for service_dir in */; do
     
     if [ -d "$service_name" ] && ([ -f "$service_name/docker-compose.yml" ] || [ -f "$service_name/docker-compose.yaml" ]); then
         cd "$service_name"
-        docker compose start
+        docker compose up -d
         cd ..
     fi
 done
