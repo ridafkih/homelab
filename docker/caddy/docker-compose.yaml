@@ -3,6 +3,7 @@ services:
     image: ghcr.io/caddybuilds/caddy-cloudflare:latest
     container_name: caddy
     restart: unless-stopped
+    network_mode: service:tailscale-sidecar
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./site:/srv
@@ -10,6 +11,24 @@ services:
       - ./caddy_config:/config
     env_file:
       - .env
+    depends_on:
+      - tailscale-sidecar
+
+  tailscale-sidecar:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-sidecar
+    hostname: homelab-docker
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_HOSTNAME=homelab-docker
+    volumes:
+      - ./.tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
     networks:
       - homelab-network
 

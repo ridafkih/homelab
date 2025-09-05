@@ -1,7 +1,7 @@
 services:
   tailscale:
     image: tailscale/tailscale:latest
-    container_name: tailscale-router
+    container_name: tailscale-sidecar
     hostname: homelab-docker
     restart: unless-stopped
     cap_add:
@@ -10,7 +10,6 @@ services:
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_EXTRA_ARGS=--advertise-routes=172.20.0.0/16 --accept-dns=false
       - TS_HOSTNAME=homelab-docker
     volumes:
       - tailscale-state:/var/lib/tailscale
