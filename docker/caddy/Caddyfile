@@ -32,3 +32,4 @@ ui.vllm.homelab.rida.dev {
     }
     reverse_proxy open-webui:8080
 }
+

@@ -2,15 +2,14 @@ services:
   vllm:
     image: vllm/vllm-openai:latest
     container_name: vllm
-    restart: unless-stopped
+    restart: always
     volumes:
       - .vllm:/root/.cache/huggingface
     runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    env_file:
+      - .env
     command: [
-      "--model", "yanolja/YanoljaNEXT-Rosetta-4B",
+      "--model", "yanolja/YanoljaNEXT-Rosetta-12B",
       "--host", "0.0.0.0",
       "--port", "8000"
     ]
