@@ -5,6 +5,44 @@
     }
 }
 
+homelab:80 {
+    handle_path /jellyfin* {
+        reverse_proxy jellyfin:8096
+        header {
+            defer
+            Location "^([^h].*)$" "/jellyfin/$1"
+        }
+    }
+    
+    handle_path /ollama* {
+        reverse_proxy ollama:11434
+        header {
+            defer  
+            Location "^([^h].*)$" "/ollama/$1"
+        }
+    }
+
+    handle_path /ui.vllm* {
+        reverse_proxy open-webui:8080
+        header {
+            defer
+            Location "^([^h].*)$" "/ui.vllm/$1"
+        }
+    }
+    
+    handle_path /vllm* {
+        reverse_proxy vllm:8000
+        header {
+            defer
+            Location "^([^h].*)$" "/vllm/$1"
+        }
+    }
+ 
+    handle / {
+        respond "OK"
+    }
+}
+
 jellyfin.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
@@ -17,4 +55,18 @@ ollama.homelab.rida.dev {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
     reverse_proxy ollama:11434
+}
+
+vllm.homelab.rida.dev {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+    reverse_proxy vllm:8000
+}
+
+ui.vllm.homelab.rida.dev {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+    reverse_proxy open-webui:8080
 }
