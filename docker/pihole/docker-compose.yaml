@@ -11,3 +11,9 @@ services:
       - .env
     volumes:
       - './.pihole:/etc/pihole'
+    networks:
+      - homelab-network
+
+networks:
+  homelab-network:
+    external: true

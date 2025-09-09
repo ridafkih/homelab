@@ -5,6 +5,13 @@
     }
 }
 
+pihole.homelab.rida.dev {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+    reverse_proxy pihole:4141
+}
+
 jellyfin.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
@@ -26,7 +33,7 @@ vllm.homelab.rida.dev {
     reverse_proxy vllm:8000
 }
 
-ui.vllm.homelab.rida.dev {
+open-webui.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
