@@ -9,7 +9,7 @@ pihole.homelab.rida.dev {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
-    reverse_proxy pihole:4141
+    reverse_proxy pihole:80
 }
 
 jellyfin.homelab.rida.dev {
