@@ -6,7 +6,7 @@ services:
     volumes:
       - .jellyfin/config:/config
       - .jellyfin/cache:/cache
-      - ~/media/storage:/media:ro
+      - /data/media/:/media:ro
     restart: always
     runtime: nvidia
     env_file:
