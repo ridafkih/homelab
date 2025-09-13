@@ -14,4 +14,3 @@ sudo systemctl daemon-reload
 sudo systemctl enable example.service
 sudo systemctl start example.service
 ```
-

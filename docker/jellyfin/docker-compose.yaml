@@ -4,9 +4,9 @@ services:
     container_name: jellyfin
     user: 1000:1000
     volumes:
-      - /opt/jellyfin/config:/config
-      - /opt/jellyfin/cache:/cache
-      - ~/media:/media:ro
+      - .jellyfin/config:/config
+      - .jellyfin/cache:/cache
+      - ~/media/storage:/media:ro
     restart: always
     runtime: nvidia
     env_file:
