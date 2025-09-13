@@ -5,35 +5,28 @@
     }
 }
 
-pihole.homelab.rida.dev {
+pihole.rida.sh {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
     reverse_proxy pihole:80
 }
 
-jellyfin.homelab.rida.dev {
+jellyfin.rida.sh {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
     reverse_proxy jellyfin:8096
 }
 
-ollama.homelab.rida.dev {
+ollama.rida.sh {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
     reverse_proxy ollama:11434
 }
 
-vllm.homelab.rida.dev {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
-    reverse_proxy vllm:8000
-}
-
-open-webui.homelab.rida.dev {
+open-webui.rida.sh {
     tls {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
