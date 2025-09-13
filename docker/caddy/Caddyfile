@@ -1,35 +1,24 @@
-{
-    email homelab-caddy@rida.dev
-    servers {
-        trusted_proxies static 100.64.0.0/10 172.20.0.0/16
-    }
+(cloudflare) {
+  dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+  resolver 1.1.1.1 1.0.0.1
 }
 
 pihole.rida.sh {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
+    import cloudflare
     reverse_proxy pihole:80
 }
 
 jellyfin.rida.sh {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
+    import cloudflare
     reverse_proxy jellyfin:8096
 }
 
 ollama.rida.sh {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
+    import cloudflare
     reverse_proxy ollama:11434
 }
 
 open-webui.rida.sh {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
+    import cloudflare
     reverse_proxy open-webui:8080
 }
-
