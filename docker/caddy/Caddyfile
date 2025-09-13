@@ -1,24 +1,26 @@
 (cloudflare) {
-  dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-  resolver 1.1.1.1 1.0.0.1
+  tls {
+    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    resolver 1.1.1.1 1.0.0.1
+  }
 }
 
 pihole.rida.sh {
-    import cloudflare
     reverse_proxy pihole:80
+    import cloudflare
 }
 
 jellyfin.rida.sh {
-    import cloudflare
     reverse_proxy jellyfin:8096
+    import cloudflare
 }
 
 ollama.rida.sh {
-    import cloudflare
     reverse_proxy ollama:11434
+    import cloudflare
 }
 
 open-webui.rida.sh {
-    import cloudflare
     reverse_proxy open-webui:8080
+    import cloudflare
 }
