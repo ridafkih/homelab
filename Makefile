@@ -14,8 +14,5 @@ pull:
 
 update: pull up
 
-logs:
-	$(COMPOSE) logs -f --tail=200
-
 ps:
 	$(COMPOSE) ps

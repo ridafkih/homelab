@@ -5,22 +5,22 @@
   }
 }
 
-pihole.{env.DOMAIN} {
+pihole.{env.CADDY_DOMAIN} {
     reverse_proxy pihole:80
     import cloudflare
 }
 
-jellyfin.{env.DOMAIN} {
+jellyfin.{env.CADDY_DOMAIN} {
     reverse_proxy jellyfin:8096
     import cloudflare
 }
 
-ollama.{env.DOMAIN} {
+ollama.{env.CADDY_DOMAIN} {
     reverse_proxy ollama:11434
     import cloudflare
 }
 
-open-webui.{env.DOMAIN} {
+open-webui.{env.CADDY_DOMAIN} {
     reverse_proxy open-webui:8080
     import cloudflare
 }
