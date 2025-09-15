@@ -45,7 +45,7 @@ make down
 
 ## Specifications
 
-This is run on a system with the following specificiations.
+This is run on a system with the following specifications.
 
 - AMD AM5 Ryzen 7 7800X3D
 - 64GB DDR5 RAM
