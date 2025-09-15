@@ -5,22 +5,22 @@
   }
 }
 
-pihole.rida.sh {
+pihole.{env.DOMAIN} {
     reverse_proxy pihole:80
     import cloudflare
 }
 
-jellyfin.rida.sh {
+jellyfin.{env.DOMAIN} {
     reverse_proxy jellyfin:8096
     import cloudflare
 }
 
-ollama.rida.sh {
+ollama.{env.DOMAIN} {
     reverse_proxy ollama:11434
     import cloudflare
 }
 
-open-webui.rida.sh {
+open-webui.{env.DOMAIN} {
     reverse_proxy open-webui:8080
     import cloudflare
 }
