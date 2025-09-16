@@ -8,7 +8,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - config/Caddyfile:/etc/caddy/Caddyfile
+      - ./config/Caddyfile:/etc/caddy/Caddyfile
       - .data/caddy/srv:/srv
       - .data/caddy/data:/data
       - .data/caddy/config:/config
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
     environment:
       TZ: ${PIHOLE_TZ}
-      FTLCONF_webserver_api_password: ${PIHOLE_FTLCONF_WEB_API_PASSWORD}
+      FTLCONF_webserver_api_password: ${PIHOLE_FTLCONF_WEBSERVER_API_PASSWORD}
     volumes:
       - .data/pihole:/etc/pihole
     networks:
@@ -51,7 +51,7 @@ services:
       TS_USERSPACE: false
     volumes:
       - .data/pihole-tailscale/var/lib/tailscale:/var/lib/tailscale
-      - config/dnsmasq.conf:/tmp/dnsmasq.conf
+      - ./config/dnsmasq.conf:/tmp/dnsmasq.conf
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:

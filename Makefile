@@ -1,4 +1,8 @@
-COMPOSE=docker compose -f /Users/ridafkih/homelab/compose.yaml
+.EXPORT_ALL_VARIABLES:
+
+COMPOSE_PROFILES=network,ai,media
+
+COMPOSE=docker compose
 
 up:
 	$(COMPOSE) up -d
