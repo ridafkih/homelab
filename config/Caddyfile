@@ -25,3 +25,4 @@ open-webui.{env.DOMAIN} {
     reverse_proxy open-webui:8080
     import cloudflare
 }
+
