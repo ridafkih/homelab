@@ -6,8 +6,8 @@
     }
 }
 
-pihole.{env.DOMAIN} {
-    reverse_proxy {env.HOST_MACHINE_HOSTNAME}:22339
+adguard.{env.DOMAIN} {
+    reverse_proxy adguard:3000
     import cloudflare
 }
 
