@@ -155,9 +155,6 @@ services:
       - authentik-network
     environment:
       TUNNEL_TOKEN: ${AUTHENTIK_CLOUDFLARE_TUNNEL_TOKEN}
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
 
 volumes:
   authentik-database:
