@@ -18,18 +18,6 @@ services:
     networks:
       - homelab-network
 
-  pihole:
-    container_name: pihole
-    network_mode: host
-    image: pihole/pihole:latest
-    restart: unless-stopped
-    environment:
-      TZ: ${PIHOLE_TZ}
-      FTLCONF_webserver_api_password: ${PIHOLE_FTLCONF_WEBSERVER_API_PASSWORD}
-      FTLCONF_webserver_port: ${PIHOLE_FTLCONF_WEBSERVER_PORT}
-    volumes:
-      - .data/pihole:/etc/pihole
-
   jellyfin:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
@@ -155,6 +143,19 @@ services:
       - authentik-network
     environment:
       TUNNEL_TOKEN: ${AUTHENTIK_CLOUDFLARE_TUNNEL_TOKEN}
+
+  adguard:
+    image: adguard/adguardhome
+    container_name: adguardhome
+    restart: unless-stopped
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+    networks:
+      - homelab-network
+    volumes:
+      - .data/adguardhome/work:/opt/adguardhome/work
+      - .data/adguardhome/conf:/opt/adguardhome/conf
 
 volumes:
   authentik-database:
