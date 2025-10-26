@@ -68,7 +68,106 @@ services:
     networks:
       - homelab-network
 
+  authentik-postgresql:
+    container_name: authentik-postgresql
+    environment:
+      POSTGRES_DB: ${AUTHENTIK_POSTGRESQL__NAME}
+      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRESQL__PASSWORD}
+      POSTGRES_USER: ${AUTHENTIK_POSTGRESQL__USER}
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      timeout: 5s
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - authentik-database:/var/lib/postgresql/data
+    networks:
+      - authentik-network
+
+  authentik-redis:
+    container_name: authentik-redis
+    command: --save 60 1 --loglevel warning
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - redis-cli ping | grep PONG
+      timeout: 3s
+    image: docker.io/library/redis:alpine
+    restart: unless-stopped
+    volumes:
+      - authentik-redis:/data
+    networks:
+      - authentik-network
+  
+  authentik-server:
+    container_name: authentik-server
+    command: server
+    depends_on:
+      authentik-postgresql:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    image: ghcr.io/goauthentik/server:2025.8.4
+    restart: unless-stopped
+    volumes:
+      - ./.authentik/media:/media
+      - ./.authentik/custom-templates:/templates
+    networks:
+      - authentik-network
+
+  authentik-worker:
+    container_name: authentik-worker
+    command: worker
+    depends_on:
+      authentik-postgresql:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    image: ghcr.io/goauthentik/server:2025.8.4
+    restart: unless-stopped
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.authentik/media:/media
+      - ./.authentik/certs:/certs
+      - ./.authentik/custom-templates:/templates
+    networks:
+      - authentik-network
+
+  authentik-cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: authentik-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    networks:
+      - authentik-network
+    environment:
+      TUNNEL_TOKEN: ${AUTHENTIK_CLOUDFLARE_TUNNEL_TOKEN}
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+
+volumes:
+  authentik-database:
+    driver: local
+  authentik-redis:
+    driver: local
+
 networks:
+  authentik-network:
+    driver: bridge
   homelab-network:
     driver: bridge
     ipam:
