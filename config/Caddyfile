@@ -7,7 +7,7 @@
 }
 
 adguard.{env.DOMAIN} {
-    reverse_proxy adguard:3000
+    reverse_proxy adguard:3000 
     import cloudflare
 }
 
