@@ -168,6 +168,27 @@ services:
       - .data/adguardhome/work:/opt/adguardhome/work
       - .data/adguardhome/conf:/opt/adguardhome/conf
 
+  kasa:
+    container_name: kasa
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ghcr.io/astral-sh/uv:debian
+        RUN apt-get update && apt-get install -y iproute2 iputils-ping tzdata && rm -rf /var/lib/apt/lists/*
+        RUN uv pip install --system --break-system-packages python-kasa tzdata
+        RUN echo '#!/bin/sh' > /entrypoint.sh && \
+            echo 'ip route del default 2>/dev/null || true' >> /entrypoint.sh && \
+            echo 'ip route add default via 192.168.2.1 dev eth0' >> /entrypoint.sh && \
+            echo 'exec kasa "$@"' >> /entrypoint.sh && \
+            chmod +x /entrypoint.sh
+        ENTRYPOINT ["/entrypoint.sh"]
+    environment:
+      - TZ=America/Toronto
+    networks:
+      - local-network
+    cap_add:
+      - NET_ADMIN
+
 volumes:
   authentik-database:
     driver: local
@@ -183,3 +204,12 @@ networks:
       config:
         - subnet: 172.20.0.0/16
           gateway: 172.20.0.1
+  local-network:
+    driver: macvlan
+    driver_opts:
+      parent: eno1
+    ipam:
+      config:
+        - subnet: 192.168.2.0/24
+          ip_range: 192.168.2.96/29
+
