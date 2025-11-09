@@ -1,0 +1,37 @@
+(cloudflare) {
+    tls {
+        propagation_timeout -1
+        propagation_delay 1m
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
+
+pihole.{env.DOMAIN} {
+    reverse_proxy {env.HOST_MACHINE_HOSTNAME}:22339
+    import cloudflare
+}
+
+jellyfin.{env.DOMAIN} {
+    reverse_proxy jellyfin:8096
+    import cloudflare
+}
+
+ollama.{env.DOMAIN} {
+    reverse_proxy ollama:11434
+    import cloudflare
+}
+
+open-webui.{env.DOMAIN} {
+    reverse_proxy open-webui:8080
+    import cloudflare
+}
+
+adguard.{env.DOMAIN} {
+    reverse_proxy adguard:80
+    import cloudflare
+}
+
+authentik.{env.DOMAIN} {
+    reverse_proxy authentik-server:9000
+    import cloudflare
+}
