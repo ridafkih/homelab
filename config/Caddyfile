@@ -27,7 +27,7 @@ open-webui.{env.DOMAIN} {
 }
 
 adguard.{env.DOMAIN} {
-    reverse_proxy adguard:80
+    reverse_proxy adguard:3000
     import cloudflare
 }
 
