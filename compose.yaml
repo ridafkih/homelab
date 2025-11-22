@@ -189,6 +189,92 @@ services:
     cap_add:
       - NET_ADMIN
 
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - .data/prowlarr:/config
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - .data/sonarr:/config
+      - /data/media/shows:/shows
+      - /data/media/downloads:/downloads
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - .data/radarr:/config
+      - /data/media/movies:/movies
+      - /data/media/downloads:/downloads
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - .data/bazarr:/config
+      - /data/media/movies:/movies
+      - /data/media/shows:/shows
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+      - WEBUI_PORT=8080
+    volumes:
+      - .data/qbittorrent:/config
+      - /data/media/downloads:/downloads
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=America/Toronto
+    volumes:
+      - .data/jellyseerr/config:/app/config
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+
 volumes:
   authentik-database:
     driver: local

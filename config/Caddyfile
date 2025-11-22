@@ -6,32 +6,67 @@
     }
 }
 
-pihole.{env.DOMAIN} {
-    reverse_proxy {env.HOST_MACHINE_HOSTNAME}:22339
+*.{env.DOMAIN}, {env.DOMAIN} {
     import cloudflare
+    
+    @pihole host pihole.{env.DOMAIN}
+    handle @pihole {
+        reverse_proxy {env.HOST_MACHINE_HOSTNAME}:22339
+    }
+    
+    @jellyfin host jellyfin.{env.DOMAIN}
+    handle @jellyfin {
+        reverse_proxy jellyfin:8096
+    }
+
+    @jellyseerr host jellyseerr.{env.DOMAIN}
+    handle @jellyseerr {
+        reverse_proxy jellyseerr:5055
+    }
+    
+    @ollama host ollama.{env.DOMAIN}
+    handle @ollama {
+        reverse_proxy ollama:11434
+    }
+    
+    @openwebui host open-webui.{env.DOMAIN}
+    handle @openwebui {
+        reverse_proxy open-webui:8080
+    }
+    
+    @adguard host adguard.{env.DOMAIN}
+    handle @adguard {
+        reverse_proxy adguard:3000
+    }
+    
+    @authentik host authentik.{env.DOMAIN}
+    handle @authentik {
+        reverse_proxy authentik-server:9000
+    }
+    
+    @prowlarr host prowlarr.{env.DOMAIN}
+    handle @prowlarr {
+        reverse_proxy prowlarr:9696
+    }
+    
+    @sonarr host sonarr.{env.DOMAIN}
+    handle @sonarr {
+        reverse_proxy sonarr:8989
+    }
+    
+    @radarr host radarr.{env.DOMAIN}
+    handle @radarr {
+        reverse_proxy radarr:7878
+    }
+    
+    @bazarr host bazarr.{env.DOMAIN}
+    handle @bazarr {
+        reverse_proxy bazarr:6767
+    }
+    
+    @qbittorrent host qbittorrent.{env.DOMAIN}
+    handle @qbittorrent {
+        reverse_proxy qbittorrent:8080
+    }
 }
 
-jellyfin.{env.DOMAIN} {
-    reverse_proxy jellyfin:8096
-    import cloudflare
-}
-
-ollama.{env.DOMAIN} {
-    reverse_proxy ollama:11434
-    import cloudflare
-}
-
-open-webui.{env.DOMAIN} {
-    reverse_proxy open-webui:8080
-    import cloudflare
-}
-
-adguard.{env.DOMAIN} {
-    reverse_proxy adguard:3000
-    import cloudflare
-}
-
-authentik.{env.DOMAIN} {
-    reverse_proxy authentik-server:9000
-    import cloudflare
-}
