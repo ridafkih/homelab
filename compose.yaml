@@ -32,7 +32,7 @@ services:
       PUID: 1000
       PGID: 1000
       NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+      NVIDIA_DRIVER_CAPABILITIES: all
     networks:
       - homelab-network
 
@@ -98,7 +98,7 @@ services:
       - authentik-redis:/data
     networks:
       - authentik-network
-  
+
   authentik-server:
     container_name: authentik-server
     command: server
@@ -143,6 +143,9 @@ services:
     container_name: authentik-cloudflared
     restart: unless-stopped
     command: tunnel run
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
     networks:
       - authentik-network
     environment:
@@ -206,7 +209,7 @@ services:
       - homelab-network
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: linuxserver/sonarr:latest
     container_name: sonarr
     environment:
       - PUID=1000
@@ -221,7 +224,7 @@ services:
       - homelab-network
 
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: linuxserver/radarr:latest
     container_name: radarr
     environment:
       - PUID=1000
@@ -265,8 +268,16 @@ services:
     networks:
       - homelab-network
 
+  qui:
+    image: ghcr.io/autobrr/qui:main
+    container_name: qui
+    volumes:
+      - .data/qui:/config
+    networks:
+      - homelab-network
+
   jellyseerr:
-    image: fallenbagel/jellyseerr:latest
+    image: ghcr.io/seerr-team/seerr:latest 
     container_name: jellyseerr
     environment:
       - LOG_LEVEL=info
@@ -277,11 +288,194 @@ services:
     networks:
       - homelab-network
 
+  samba:
+    image: dperson/samba:latest
+    container_name: samba
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TZ=America/Toronto
+      - USERID=1000
+      - GROUPID=1000
+      - USER=${SAMBA_USERNAME};${SAMBA_PASSWORD}
+      - SHARE=nas;/mount;yes;no;no;${SAMBA_USERNAME}
+      - SHARE2=timemachine;/timemachine;yes;no;no;${SAMBA_USERNAME};${SAMBA_USERNAME};;;;vfs objects = catia fruit streams_xattr,fruit:time machine = yes,fruit:time machine max size = 600G
+      - PERMISSIONS=yes
+      - GLOBAL=socket options = TCP_NODELAY IPTOS_THROUGHPUT SO_RCVBUF=131072 SO_SNDBUF=131072
+      - GLOBAL2=min receivefile size = 16384
+      - GLOBAL3=getwd cache = yes
+      - GLOBAL4=use sendfile = yes
+      - GLOBAL5=aio read size = 16384
+      - GLOBAL6=aio write size = 16384
+      - GLOBAL7=read raw = yes
+      - GLOBAL8=write raw = yes
+      - GLOBAL9=deadtime = 30
+    volumes:
+      - /data/nas:/mount
+      - /data/timemachine:/timemachine
+
+  keeper-postgres:
+    image: postgres:17
+    container_name: keeper-postgres
+    environment:
+      POSTGRES_USER: ${KEEPER_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${KEEPER_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${KEEPER_POSTGRES_DATABASE}
+    volumes:
+      - keeper-database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keeper -d keeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - homelab-network
+
+  keeper-redis:
+    image: redis:7-alpine
+    container_name: keeper-redis
+    volumes:
+      - keeper-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - homelab-network
+
+  keeper:
+    image: ghcr.io/ridafkih/keeper-services:latest
+    container_name: keeper
+    environment:
+      DATABASE_URL: ${KEEPER_DATABASE_URL}
+      REDIS_URL: ${KEEPER_REDIS_URL}
+      WEBSOCKET_URL: ${KEEPER_WEBSOCKET_URL}
+      BETTER_AUTH_URL: ${KEEPER_BETTER_AUTH_URL}
+      BETTER_AUTH_SECRET: ${KEEPER_BETTER_AUTH_SECRET}
+      ENCRYPTION_KEY: ${KEEPER_ENCRYPTION_KEY}
+      COMMERCIAL_MODE: false
+      GOOGLE_CLIENT_ID: ${KEEPER_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${KEEPER_GOOGLE_CLIENT_SECRET:-}
+      MICROSOFT_CLIENT_ID: ${KEEPER_MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${KEEPER_MICROSOFT_CLIENT_SECRET:-}
+    depends_on:
+      keeper-postgres:
+        condition: service_healthy
+      keeper-redis:
+        condition: service_healthy
+    networks:
+      - homelab-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    env_file: .env
+    depends_on:
+      - tempo
+      - loki
+    networks:
+      - homelab-network
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: tempo
+    restart: unless-stopped
+    command: ["-config.file", "/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo:/var/tempo
+    networks:
+      - homelab-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}"
+      - "--web.enable-remote-write-receiver"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+    networks:
+      - homelab-network
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    command: ["-config.file", "/etc/loki/loki.yaml"]
+    volumes:
+      - ./config/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki:/loki
+    networks:
+      - homelab-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - grafana:/var/lib/grafana
+    depends_on:
+      - tempo
+      - prometheus
+      - loki
+    networks:
+      - homelab-network
+
+  grafana-funnel:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-funnel
+    restart: unless-stopped
+    hostname: otel-funnel
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - grafana-funnel:/var/lib/tailscale
+      - ./config/tailscale-serve.json:/config/serve.json:ro
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    networks:
+      - homelab-network
 
 volumes:
+  keeper-database:
+    driver: local
+  keeper-redis:
+    driver: local
   authentik-database:
     driver: local
   authentik-redis:
+    driver: local
+  tempo:
+    driver: local
+  prometheus:
+    driver: local
+  loki:
+    driver: local
+  grafana:
+    driver: local
+  grafana-funnel:
     driver: local
 
 networks:
@@ -301,4 +495,3 @@ networks:
       config:
         - subnet: 192.168.2.0/24
           ip_range: 192.168.2.96/29
-
