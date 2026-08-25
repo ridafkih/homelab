@@ -288,31 +288,107 @@ services:
     networks:
       - homelab-network
 
-  samba:
-    image: dperson/samba:latest
-    container_name: samba
+  seafile-db:
+    image: mariadb:10.11
+    container_name: seafile-db
     restart: unless-stopped
-    network_mode: host
     environment:
-      - TZ=America/Toronto
-      - USERID=1000
-      - GROUPID=1000
-      - USER=${SAMBA_USERNAME};${SAMBA_PASSWORD}
-      - SHARE=nas;/mount;yes;no;no;${SAMBA_USERNAME}
-      - SHARE2=timemachine;/timemachine;yes;no;no;${SAMBA_USERNAME};${SAMBA_USERNAME};;;;vfs objects = catia fruit streams_xattr,fruit:time machine = yes,fruit:time machine max size = 600G
-      - PERMISSIONS=yes
-      - GLOBAL=socket options = TCP_NODELAY IPTOS_THROUGHPUT SO_RCVBUF=131072 SO_SNDBUF=131072
-      - GLOBAL2=min receivefile size = 16384
-      - GLOBAL3=getwd cache = yes
-      - GLOBAL4=use sendfile = yes
-      - GLOBAL5=aio read size = 16384
-      - GLOBAL6=aio write size = 16384
-      - GLOBAL7=read raw = yes
-      - GLOBAL8=write raw = yes
-      - GLOBAL9=deadtime = 30
+      MYSQL_ROOT_PASSWORD: ${SEAFILE_MYSQL_ROOT_PASSWORD}
+      MYSQL_LOG_CONSOLE: true
+      MARIADB_AUTO_UPGRADE: 1
     volumes:
-      - /data/nas:/mount
-      - /data/timemachine:/timemachine
+      - seafile-database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh", "--connect", "--mariadbupgrade", "--innodb_initialized"]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 10
+    networks:
+      - seafile-network
+
+  seafile-redis:
+    image: redis:7-alpine
+    container_name: seafile-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${SEAFILE_REDIS_PASSWORD}", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${SEAFILE_REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seafile-network
+
+  seafile:
+    image: seafileltd/seafile-mc:13.0-latest
+    container_name: seafile
+    restart: unless-stopped
+    volumes:
+      - ${SEAFILE_DATA_PATH:-/data/seafile}:/shared
+    environment:
+      SEAFILE_MYSQL_DB_HOST: seafile-db
+      SEAFILE_MYSQL_DB_PORT: 3306
+      SEAFILE_MYSQL_DB_USER: seafile
+      SEAFILE_MYSQL_DB_PASSWORD: ${SEAFILE_MYSQL_PASSWORD}
+      INIT_SEAFILE_MYSQL_ROOT_PASSWORD: ${SEAFILE_MYSQL_ROOT_PASSWORD}
+      SEAFILE_MYSQL_DB_CCNET_DB_NAME: ccnet_db
+      SEAFILE_MYSQL_DB_SEAFILE_DB_NAME: seafile_db
+      SEAFILE_MYSQL_DB_SEAHUB_DB_NAME: seahub_db
+      TIME_ZONE: America/Toronto
+      INIT_SEAFILE_ADMIN_EMAIL: ${SEAFILE_ADMIN_EMAIL}
+      INIT_SEAFILE_ADMIN_PASSWORD: ${SEAFILE_ADMIN_PASSWORD}
+      SEAFILE_SERVER_HOSTNAME: seafile.${CADDY_DOMAIN}
+      SEAFILE_SERVER_PROTOCOL: https
+      SITE_ROOT: /
+      NON_ROOT: false
+      JWT_PRIVATE_KEY: ${SEAFILE_JWT_PRIVATE_KEY}
+      SEAFILE_LOG_TO_STDOUT: false
+      ENABLE_GO_FILESERVER: true
+      ENABLE_SEADOC: true
+      SEADOC_SERVER_URL: https://seafile.${CADDY_DOMAIN}/sdoc-server
+      CACHE_PROVIDER: redis
+      REDIS_HOST: seafile-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${SEAFILE_REDIS_PASSWORD}
+      ENABLE_NOTIFICATION_SERVER: false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      seafile-db:
+        condition: service_healthy
+      seafile-redis:
+        condition: service_started
+    networks:
+      - seafile-network
+      - homelab-network
+
+  seadoc:
+    image: seafileltd/sdoc-server:2.0-latest
+    container_name: seadoc
+    restart: unless-stopped
+    volumes:
+      - .data/seadoc:/shared
+    environment:
+      DB_HOST: seafile-db
+      DB_PORT: 3306
+      DB_USER: seafile
+      DB_PASSWORD: ${SEAFILE_MYSQL_PASSWORD}
+      DB_NAME: seahub_db
+      TIME_ZONE: America/Toronto
+      JWT_PRIVATE_KEY: ${SEAFILE_JWT_PRIVATE_KEY}
+      NON_ROOT: false
+      SEAHUB_SERVICE_URL: http://seafile
+    depends_on:
+      seafile-db:
+        condition: service_healthy
+    networks:
+      - seafile-network
+      - homelab-network
 
   keeper-postgres:
     image: postgres:17
@@ -459,6 +535,8 @@ services:
       - homelab-network
 
 volumes:
+  seafile-database:
+    driver: local
   keeper-database:
     driver: local
   keeper-redis:
@@ -479,6 +557,8 @@ volumes:
     driver: local
 
 networks:
+  seafile-network:
+    driver: bridge
   authentik-network:
     driver: bridge
   homelab-network:

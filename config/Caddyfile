@@ -74,6 +74,23 @@
         reverse_proxy qui:7476
     }
 
+    @seafile host seafile.{env.DOMAIN}
+    handle @seafile {
+        handle_path /socket.io/* {
+            rewrite * /socket.io{uri}
+            reverse_proxy seadoc:80
+        }
+
+        handle_path /sdoc-server/* {
+            rewrite * {uri}
+            reverse_proxy seadoc:80
+        }
+
+        handle {
+            reverse_proxy seafile:80
+        }
+    }
+
     @keeper host keeper.{env.DOMAIN}
     handle @keeper {
         handle /api/* {
