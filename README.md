@@ -30,6 +30,18 @@ Jellyfin is a great alternative to other popular options, like Plex. It hosts me
 
 As far as clients go, I'd highly recommend [Jellyfin's official companion application for Android](https://play.google.com/store/apps/details?id=org.jellyfin.mobile&hl=en_CA&pli=1) or your Android-compatible television, or the [Streamyfin application on the Apple App Store](https://apps.apple.com/us/app/streamyfin/id6593660679). They are both very well made, and work flawlessly.
 
+### Files
+
+#### Seafile
+
+Seafile is a self-hosted file sync & share server - the closest open-source equivalent to Google Drive. It replaces the previous Samba/NAS setup with something reachable from outside the tailnet, with share links, user accounts and desktop/mobile sync clients.
+
+It is a good fit for large media files specifically: Seafile splits files into content-addressed blocks and only transfers the blocks that changed, so re-uploading a re-exported render only ships the delta rather than the whole file.
+
+Note that Seafile stores data in its own block format under `SEAFILE_DATA_PATH`, not as plain files on disk. Files in a Seafile library are not directly readable by Jellyfin or the *arr stack, and recovering them without a working Seafile install means using Seafile's own export tooling. Libraries you want Jellyfin to serve should be exported to `/data/media` rather than shared out of Seafile.
+
+SeaDoc, Seafile's collaborative document editor, is enabled and served under `/sdoc-server` on the same hostname.
+
 ### Artificial Intelligence
 
 #### Ollama
@@ -59,6 +71,35 @@ Tailscale is used to access the home lab remotely, and is baked into this projec
 ### Preparing for Jellyfin
 
 The media server mounts a hard-coded directory, where it will be used to access files. Before running Jellyfin, you should mount a directory you plan on storing your media to /data/media/.
+
+### Preparing for Seafile
+
+Seafile needs a storage location, a few secrets, and an initial admin account. Set these in your `.env`.
+
+`SEAFILE_DATA_PATH` is where the block store lives, and is where the bulk of your data will end up. It defaults to `/data/seafile` on the mergerfs pool.
+
+The secrets can be generated with:
+
+```bash
+# JWT signing key - must be at least 32 characters
+openssl rand -base64 32
+
+# Database and cache passwords
+openssl rand -base64 24
+```
+
+```
+SEAFILE_DATA_PATH=/data/seafile
+SEAFILE_ADMIN_EMAIL=you@example.net
+SEAFILE_ADMIN_PASSWORD=********
+SEAFILE_JWT_PRIVATE_KEY=********************************
+SEAFILE_MYSQL_ROOT_PASSWORD=********
+SEAFILE_MYSQL_PASSWORD=********
+SEAFILE_REDIS_PASSWORD=********
+```
+
+The admin email and password are only read on first startup, when the database is initialised. Changing them later has no effect - use the web UI instead.
+
 
 ### Preparing for Caddy
 
@@ -102,6 +143,7 @@ With all said and done, Caddy will be able to automatically add the ACME TXT rec
 - jellyfin.example.net
 - ollama.example.net
 - open-webui.example.net
+- seafile.example.net
 
 These can be configured in [the Caddyfile](./config/Caddyfile)
 
