@@ -113,5 +113,10 @@
     handle @grafana {
         reverse_proxy grafana:3000
     }
+
+    @signoz host signoz.{env.DOMAIN}
+    handle @signoz {
+        reverse_proxy signoz:8080
+    }
 }
 

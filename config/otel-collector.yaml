@@ -35,6 +35,18 @@ exporters:
       enabled: true
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
+  otlp/signoz:
+    endpoint: signoz-otel-collector:4317
+    tls:
+      insecure: true
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 120s
 
 service:
   extensions: [bearertokenauth, health_check]
@@ -42,12 +54,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [resource, batch]
-      exporters: [otlphttp/tempo]
+      exporters: [otlphttp/tempo, otlp/signoz]
     metrics:
       receivers: [otlp]
       processors: [resource, batch]
-      exporters: [prometheusremotewrite]
+      exporters: [prometheusremotewrite, otlp/signoz]
     logs:
       receivers: [otlp]
       processors: [resource, batch]
-      exporters: [otlphttp/loki]
+      exporters: [otlphttp/loki, otlp/signoz]

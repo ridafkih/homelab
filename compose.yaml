@@ -534,6 +534,165 @@ services:
     networks:
       - homelab-network
 
+  signoz-init-clickhouse:
+    image: clickhouse/clickhouse-server:25.12.5
+    container_name: signoz-init-clickhouse
+    restart: on-failure
+    command:
+      - bash
+      - -c
+      - |
+        version="v0.0.1"
+        node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+        node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+        echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
+        cd /tmp
+        wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+        tar -xvzf histogram-quantile.tar.gz
+        mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    volumes:
+      - signoz-clickhouse-scripts:/var/lib/clickhouse/user_scripts
+    networks:
+      - signoz-network
+
+  signoz-zookeeper:
+    image: signoz/zookeeper:3.7.1
+    container_name: signoz-zookeeper
+    restart: unless-stopped
+    user: root
+    environment:
+      - ZOO_SERVER_ID=1
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_AUTOPURGE_INTERVAL=1
+      - ZOO_ENABLE_PROMETHEUS_METRICS=yes
+      - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
+    volumes:
+      - signoz-zookeeper:/bitnami/zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      signoz-network:
+        aliases:
+          - zookeeper-1
+
+  signoz-clickhouse:
+    image: clickhouse/clickhouse-server:25.12.5
+    container_name: signoz-clickhouse
+    restart: unless-stopped
+    tty: true
+    environment:
+      - CLICKHOUSE_SKIP_USER_SETUP=1
+    depends_on:
+      signoz-init-clickhouse:
+        condition: service_completed_successfully
+      signoz-zookeeper:
+        condition: service_healthy
+    volumes:
+      - ./config/signoz/clickhouse-config.xml:/etc/clickhouse-server/config.xml:ro
+      - ./config/signoz/clickhouse-users.xml:/etc/clickhouse-server/users.xml:ro
+      - ./config/signoz/clickhouse-custom-function.xml:/etc/clickhouse-server/custom-function.xml:ro
+      - ./config/signoz/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - signoz-clickhouse-scripts:/var/lib/clickhouse/user_scripts
+      - signoz-clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      signoz-network:
+        aliases:
+          - clickhouse
+
+  signoz-telemetrystore-migrator:
+    image: signoz/signoz-otel-collector:${SIGNOZ_OTELCOL_VERSION:-v0.144.8}
+    container_name: signoz-telemetrystore-migrator
+    restart: on-failure
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    environment:
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=true
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate bootstrap &&
+        /signoz-otel-collector migrate sync up &&
+        /signoz-otel-collector migrate async up
+    networks:
+      - signoz-network
+
+  signoz:
+    image: signoz/signoz:${SIGNOZ_VERSION:-v0.138.0}
+    container_name: signoz
+    restart: unless-stopped
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    environment:
+      - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+      - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_JWT_SECRET}
+    volumes:
+      - signoz-sqlite:/var/lib/signoz
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - signoz-network
+      - homelab-network
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:${SIGNOZ_OTELCOL_VERSION:-v0.144.8}
+    container_name: signoz-otel-collector
+    restart: unless-stopped
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+      signoz-telemetrystore-migrator:
+        condition: service_completed_successfully
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate sync check &&
+        /signoz-otel-collector --config=/etc/otel-collector-config.yaml --manager-config=/etc/manager-config.yaml --copy-path=/var/tmp/collector-config.yaml
+    volumes:
+      - ./config/signoz/otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+      - ./config/signoz/otel-collector-opamp.yaml:/etc/manager-config.yaml:ro
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=true
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    ports:
+      # Grafana-stack otel-collector still holds 4317/4318; these move over
+      # once that stack is retired.
+      - "4327:4317"
+      - "4328:4318"
+    networks:
+      - signoz-network
+      - homelab-network
+
 volumes:
   seafile-database:
     driver: local
@@ -555,11 +714,21 @@ volumes:
     driver: local
   grafana-funnel:
     driver: local
+  signoz-clickhouse:
+    driver: local
+  signoz-clickhouse-scripts:
+    driver: local
+  signoz-zookeeper:
+    driver: local
+  signoz-sqlite:
+    driver: local
 
 networks:
   seafile-network:
     driver: bridge
   authentik-network:
+    driver: bridge
+  signoz-network:
     driver: bridge
   homelab-network:
     driver: bridge
