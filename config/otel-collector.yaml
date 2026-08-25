@@ -28,7 +28,7 @@ processors:
 
 exporters:
   otlphttp/tempo:
-    endpoint: http://tempo:3200
+    endpoint: http://tempo:4318
   prometheusremotewrite:
     endpoint: http://prometheus:9090/api/v1/write
     resource_to_telemetry_conversion:
