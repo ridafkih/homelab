@@ -126,10 +126,10 @@ dhcp:
   interface_name: eno1
   local_domain_name: lan
   dhcpv4:
-    gateway_ip: 192.168.2.1
+    gateway_ip: 10.0.0.1
     subnet_mask: 255.255.255.0
-    range_start: 192.168.2.10
-    range_end: 192.168.2.254
+    range_start: 10.0.0.10
+    range_end: 10.0.0.254
     lease_duration: 86400
     icmp_timeout_msec: 1000
     options: []

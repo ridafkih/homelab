@@ -148,7 +148,10 @@ services:
       - 1.1.1.1
       - 1.0.0.1
     networks:
-      - authentik-network
+      authentik-network:
+        gw_priority: 10
+      local-network:
+        gw_priority: 100
     environment:
       TUNNEL_TOKEN: ${AUTHENTIK_CLOUDFLARE_TUNNEL_TOKEN}
 
@@ -197,7 +200,7 @@ services:
         RUN uv pip install --system --break-system-packages python-kasa tzdata
         RUN echo '#!/bin/sh' > /entrypoint.sh && \
             echo 'ip route del default 2>/dev/null || true' >> /entrypoint.sh && \
-            echo 'ip route add default via 192.168.2.1 dev eth0' >> /entrypoint.sh && \
+            echo 'ip route add default via 10.0.0.1 dev eth0' >> /entrypoint.sh && \
             echo 'exec kasa "$@"' >> /entrypoint.sh && \
             chmod +x /entrypoint.sh
         ENTRYPOINT ["/entrypoint.sh"]
@@ -755,5 +758,6 @@ networks:
       parent: eno1
     ipam:
       config:
-        - subnet: 192.168.2.0/24
-          ip_range: 192.168.2.96/29
+        - subnet: 10.0.0.0/24
+          gateway: 10.0.0.1
+          ip_range: 10.0.0.240/29
