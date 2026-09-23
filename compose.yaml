@@ -17,6 +17,7 @@ services:
       HOST_MACHINE_HOSTNAME: ${CADDY_HOST_MACHINE_HOSTNAME}
     networks:
       - homelab-network
+      - authentik-network
 
   jellyfin:
     image: jellyfin/jellyfin:latest
@@ -151,25 +152,37 @@ services:
     environment:
       TUNNEL_TOKEN: ${AUTHENTIK_CLOUDFLARE_TUNNEL_TOKEN}
 
+  adguard-init:
+    image: alpine
+    container_name: adguardhome-init
+    command:
+      - sh
+      - -euc
+      - |
+        : "$${ADGUARD_USER:?missing from .env}"
+        : "$${ADGUARD_PASSWORD_HASH:?missing from .env}"
+        sed -e "s|__ADGUARD_USER__|$${ADGUARD_USER}|g" \
+            -e "s|__ADGUARD_PASSWORD_HASH__|$${ADGUARD_PASSWORD_HASH}|g" \
+            /src/AdGuardHome.yaml > /dst/AdGuardHome.yaml
+        if grep -q '__ADGUARD_' /dst/AdGuardHome.yaml; then
+          echo "error: unsubstituted placeholder remains" >&2; exit 1
+        fi
+        echo "rendered AdGuardHome.yaml"
+    environment:
+      ADGUARD_USER: ${ADGUARD_USER}
+      ADGUARD_PASSWORD_HASH: ${ADGUARD_PASSWORD_HASH}
+    volumes:
+      - ./config/adguardhome:/src:ro
+      - .data/adguardhome/conf:/dst
+
   adguard:
     image: adguard/adguardhome
     container_name: adguardhome
     restart: unless-stopped
-    ports:
-      - 53:53/udp
-      - 53:53/tcp
-      - 67:67/udp
-      - 68:68/tcp
-      - 68:68/udp
-      - 443:443/udp
-      - 784:784/udp
-      - 853:853/tcp
-      - 853:853/udp
-      - 8853:8853/udp
-      - 5443:5443/tcp
-      - 5443:5443/udp
-    networks:
-      - homelab-network
+    depends_on:
+      adguard-init:
+        condition: service_completed_successfully
+    network_mode: host
     volumes:
       - .data/adguardhome/work:/opt/adguardhome/work
       - .data/adguardhome/conf:/opt/adguardhome/conf
