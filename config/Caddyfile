@@ -36,7 +36,7 @@
     
     @adguard host adguard.{env.DOMAIN}
     handle @adguard {
-        reverse_proxy adguard:3000
+        reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3000
     }
     
     @authentik host authentik.{env.DOMAIN}
@@ -103,11 +103,6 @@
             reverse_proxy keeper:3000
         }
     }
-
-    @llama-cpp host llama-cpp.{env.DOMAIN}
-    handle @llama-cpp {
-        reverse_proxy llama-cpp:8080
-    }     
 
     @grafana host grafana.{env.DOMAIN}
     handle @grafana {
