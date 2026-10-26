@@ -1,0 +1,16 @@
+[Unit]
+Description=Generate the NVIDIA CDI spec before Docker starts
+After=systemd-modules-load.service nvidia-persistenced.service
+Wants=nvidia-persistenced.service
+Before=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/nvidia-modprobe -c=0
+ExecStartPre=/usr/bin/nvidia-modprobe -u -c=0
+ExecStartPre=/usr/bin/mkdir -p /etc/cdi
+ExecStart=/usr/bin/nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+
+[Install]
+WantedBy=docker.service
