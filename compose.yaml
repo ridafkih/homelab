@@ -386,6 +386,7 @@ services:
       - homelab-network
 
   keeper-postgres:
+    restart: unless-stopped
     image: postgres:17
     container_name: keeper-postgres
     environment:
@@ -403,6 +404,7 @@ services:
       - homelab-network
 
   keeper-redis:
+    restart: unless-stopped
     image: redis:7-alpine
     container_name: keeper-redis
     volumes:
@@ -416,6 +418,7 @@ services:
       - homelab-network
 
   keeper:
+    restart: unless-stopped
     image: ghcr.io/ridafkih/keeper-services:latest
     container_name: keeper
     environment:
