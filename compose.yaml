@@ -37,21 +37,6 @@ services:
     networks:
       - homelab-network
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    restart: always
-    volumes:
-      - .data/ollama/root/.ollama:/root/.ollama
-    runtime: nvidia
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: compute,utility
-      CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH}
-      OLLAMA_KEEP_ALIVE: -1
-    networks:
-      - homelab-network
-
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
