@@ -1,0 +1,15 @@
+# Static information about the filesystems.
+# See fstab(5) for details.
+
+UUID=fa876494-200f-4c5d-95d6-0db79304bed7 /mnt/disk1 ext4 defaults,nofail,noatime,x-systemd.device-timeout=15s 0 2
+UUID=62a0f9e6-258d-4ae7-a952-78c462d51c49 /mnt/disk2 ext4 defaults,nofail,noatime,x-systemd.device-timeout=15s 0 2
+
+/mnt/disk1:/mnt/disk2 /data mergerfs allow_other,cache.files=auto-full,dropcacheonclose=false,category.create=mfs,func.readdir=cor:4,statfs=base,cache.statfs=60,moveonenospc=true,x-systemd.requires=/mnt/disk1,x-systemd.requires=/mnt/disk2,nofail 0 0
+
+# <file system> <dir> <type> <options> <dump> <pass>
+# /dev/nvme0n1p2
+UUID=070b9e43-dbb5-423d-bd0d-e474ebed2e86	/         	ext4      	rw,relatime	0 1
+
+# /dev/nvme0n1p1
+UUID=BD5C-4E9B      	/boot     	vfat      	rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro	0 2
+/mnt/disk2/timemachine.img /data/timemachine ext4 loop,defaults,nofail,x-systemd.requires=/mnt/disk2 0 0
