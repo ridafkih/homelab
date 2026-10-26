@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+readonly password_file=/root/.config/restic/homelab.pass
+readonly exclude_file=/etc/homelab-backup/excludes
+readonly dump_dir=/var/backups/homelab-db
+readonly cache_dir=/var/cache/homelab-backup
+readonly system_paths=(
+  /etc
+  /root
+  /home/rida
+  /var/lib/tailscale
+  /var/lib/docker/volumes/keeper_postgres-data
+  /var/lib/docker/volumes/homelab_grafana-funnel
+  /var/lib/docker/volumes/homelab_signoz-sqlite
+  /var/lib/docker/volumes/homelab_grafana
+  /var/lib/docker/volumes/grafana_grafana-data
+  "$dump_dir"
+)
+
+fail() {
+  echo "homelab-backup: $*" >&2
+  exit 1
+}
+
+require_mounted() {
+  mountpoint -q "$1" || fail "$1 is not mounted"
+}
+
+dump_postgres() {
+  local container=$1 user=$2 target="$dump_dir/$1.sql"
+  docker exec "$container" pg_dumpall --clean --if-exists -U "$user" > "$target.partial"
+  tail -n 5 "$target.partial" | grep -q "PostgreSQL database cluster dump complete" || fail "$container dump incomplete"
+  mv "$target.partial" "$target"
+}
+
+dump_mariadb() {
+  local container=$1 target="$dump_dir/$1.sql"
+  docker exec "$container" sh -c 'exec mariadb-dump -uroot -p"$MYSQL_ROOT_PASSWORD" --all-databases --single-transaction --routines --events --triggers' > "$target.partial"
+  tail -n 1 "$target.partial" | grep -q "Dump completed" || fail "$container dump incomplete"
+  mv "$target.partial" "$target"
+}
+
+backup_to() {
+  local repository=$1
+  shift
+  [[ -f "$repository/config" ]] || fail "no restic repository at $repository"
+  restic --repo "$repository" --password-file "$password_file" --cache-dir "$cache_dir" backup \
+    --exclude-file "$exclude_file" --exclude-caches --tag homelab "$@"
+  restic --repo "$repository" --password-file "$password_file" --cache-dir "$cache_dir" forget --prune \
+    --tag homelab --group-by host,tags --keep-daily 7 --keep-weekly 4 --keep-monthly 6
+}
+
+[[ -r "$password_file" ]] || fail "missing $password_file"
+[[ -r "$exclude_file" ]] || fail "missing $exclude_file"
+require_mounted /mnt/disk1
+require_mounted /mnt/disk2
+
+install -d -m 0700 "$dump_dir" "$cache_dir"
+dump_postgres authentik-postgresql authentik
+dump_postgres keeper-postgres rida
+dump_mariadb seafile-db
+
+backup_to /mnt/disk2/backup/restic "${system_paths[@]}" /mnt/disk1/seafile
+backup_to /mnt/disk1/backup/restic "${system_paths[@]}" /mnt/disk2/seafile

@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up irreplaceable homelab data with restic
+After=docker.service data.mount
+Requires=docker.service
+RequiresMountsFor=/mnt/disk1 /mnt/disk2
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homelab-backup
+Nice=10
+IOSchedulingClass=idle
