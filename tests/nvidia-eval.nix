@@ -4,6 +4,7 @@ let
 
   withGpu = enable: host.extendModules {
     modules = [
+      (self + "/secrets/test-module.nix")
       {
         homelab.gpu.enable = lib.mkForce enable;
         virtualisation.docker.enable = lib.mkForce true;
