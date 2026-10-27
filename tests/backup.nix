@@ -183,7 +183,7 @@ let
 
   failed = lib.attrNames (lib.filterAttrs (_: passed: !(evaluates passed) || !(holds passed)) expectations);
 
-  prepareText = pkgs.writeText "backup-prepare-command" ((job "disk1").backupPrepareCommand or "");
+  prepareText = pkgs.writeText "backup-prepare-command" (let command = (jobs.disk1 or { }).backupPrepareCommand or null; in if command == null then "" else command);
   prepareProbe = pkgs.runCommand "backup-prepare-probe" { } ''
     scripts=$(grep -oE '/nix/store/[a-z0-9]{32}-[^/ "]+' ${prepareText} | sort -u)
     test -n "$scripts"
