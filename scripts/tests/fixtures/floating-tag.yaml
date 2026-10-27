@@ -1,0 +1,20 @@
+name: fixture-floating-tag
+
+services:
+  latest:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+  tag-only:
+    image: grafana/tempo:2.6.1
+  no-tag:
+    image: docker.io/library/busybox@sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
+  no-image:
+    container_name: fixture-no-image
+  short-digest:
+    image: docker.io/library/busybox:1.37.0@sha256:a5d0ce49
+  upper-digest:
+    image: docker.io/library/busybox:1.37.0@sha256:A5D0CE49AA801D475DA48F8CB163C354AB95CAB073CD3C138BD458FC8257FBF1
+  interpolated:
+    image: signoz/signoz:${PROMETHEUS_RETENTION:?}@sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
+  built:
+    image: docker.io/library/busybox:1.37.0@sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
+    build: ./context
