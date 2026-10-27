@@ -6,7 +6,7 @@
 /home/rida/.mozilla
 /home/rida/.local/share
 **/node_modules
-/home/rida/windows/windows-storage
+/data/windows
 /home/rida/homelab/.data/llama-cpp
 /home/rida/homelab/.data/vllm
 /home/rida/homelab/.data/jellyfin/cache
