@@ -49,9 +49,5 @@ in
 
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) config.homelab.unfreeAllow;
 
-  fileSystems."/" = lib.mkOverride 1500 {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "ext4";
-  };
   boot.loader.systemd-boot.enable = true;
 }
