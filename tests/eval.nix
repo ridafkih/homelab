@@ -14,7 +14,7 @@ let
   withUnfreeAllow = names: host.extendModules {
     modules = [ { homelab.unfreeAllow = lib.mkForce names; } ];
   };
-  pkgsOf = system: system.config._module.args.pkgs;
+  pkgsOf = system: system._module.args.pkgs;
   evaluates = value: (builtins.tryEval (builtins.seq value true)).success;
   drvEvaluates = drv: evaluates drv.drvPath;
   nvidiaOf = system: (pkgsOf system).linuxPackages.nvidiaPackages.production;
