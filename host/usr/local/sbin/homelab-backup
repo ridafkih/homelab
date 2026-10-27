@@ -6,6 +6,7 @@ readonly password_file=/root/.config/restic/homelab.pass
 readonly exclude_file=/etc/homelab-backup/excludes
 readonly dump_dir=/var/backups/homelab-db
 readonly cache_dir=/var/cache/homelab-backup
+readonly openseo_dir=/home/rida/homelab/openseo
 readonly system_paths=(
   /etc
   /root
@@ -42,6 +43,39 @@ dump_mariadb() {
   mv "$target.partial" "$target"
 }
 
+openseo_compose() {
+  docker compose --project-directory "$openseo_dir" "$@"
+}
+
+archive_openseo_volume() {
+  local image=$1 container=$2 path=$3 target=$4
+  docker run --rm --network none -u 0 --volumes-from "$container:ro" --entrypoint tar "$image" \
+    -czf - -C "$path" . > "$target"
+}
+
+dump_openseo() {
+  local target="$dump_dir/openseo" runtime storage image status=0
+  local -a running
+  runtime=$(openseo_compose ps -aq runtime)
+  storage=$(openseo_compose ps -aq storage)
+  [[ -n "$runtime" && -n "$storage" ]] || fail "openseo is not deployed"
+  image=$(docker inspect --format '{{.Image}}' "$runtime")
+  mapfile -t running < <(openseo_compose ps --services --status running | grep -xE 'web|runtime|crawl-gateway|storage' || true)
+  rm -rf "$target.partial"
+  install -d -m 0700 "$target.partial"
+  openseo_compose stop web crawl-gateway runtime storage
+  archive_openseo_volume "$image" "$storage" /data "$target.partial/storage.tar.gz" || status=$?
+  ((status)) || archive_openseo_volume "$image" "$runtime" /config "$target.partial/config.tar.gz" || status=$?
+  ((${#running[@]} == 0)) || openseo_compose start "${running[@]}"
+  ((status == 0)) || fail "openseo volume archive failed"
+  printf '{"format":1,"celld":"0.5.1","image":"%s","createdAt":"%s","files":{"storage.tar.gz":"%s","config.tar.gz":"%s"}}\n' \
+    "$image" "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
+    "$(sha256sum "$target.partial/storage.tar.gz" | cut -d' ' -f1)" \
+    "$(sha256sum "$target.partial/config.tar.gz" | cut -d' ' -f1)" > "$target.partial/manifest.json"
+  rm -rf "$target"
+  mv "$target.partial" "$target"
+}
+
 backup_to() {
   local repository=$1
   shift
@@ -61,6 +95,7 @@ install -d -m 0700 "$dump_dir" "$cache_dir"
 dump_postgres authentik-postgresql authentik
 dump_postgres keeper-postgres rida
 dump_mariadb seafile-db
+dump_openseo
 
 backup_to /mnt/disk2/backup/restic "${system_paths[@]}" /mnt/disk1/seafile
 backup_to /mnt/disk1/backup/restic "${system_paths[@]}" /mnt/disk2/seafile
