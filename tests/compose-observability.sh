@@ -284,7 +284,7 @@ fi
 
 if [ -n "$live_host" ]; then
   while read -r svc container pin; do
-    running=$(ssh -o BatchMode=yes "$live_host" "docker image inspect -f '{{json .RepoDigests}}' \$(docker inspect -f '{{.Image}}' $container)" 2>/dev/null | jq -r --arg r "${pin%%:*}" '.[] | select(startswith($r + "@"))' | head -n 1)
+    running=$(ssh -n -o BatchMode=yes "$live_host" "docker image inspect -f '{{json .RepoDigests}}' \$(docker inspect -f '{{.Image}}' $container)" 2>/dev/null | jq -r --arg r "${pin%%:*}" '.[] | select(startswith($r + "@"))' | head -n 1)
     check "pin of $svc matches the running $container on $live_host" "${pin#*@}" "${running#*@}"
   done < "$scratch/pins.tsv"
 fi
