@@ -1,1 +1,24 @@
-services: {}
+services:
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest@sha256:9c398a17f826530b99e0a68e63ba85f341ddbadc9c2f23668a1aa8f58ce33fb8
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ${HOMELAB_DATA_DIR:?}/caddy/srv:/srv
+      - ${HOMELAB_DATA_DIR:?}/caddy/data:/data
+      - ${HOMELAB_DATA_DIR:?}/caddy/config:/config
+    environment:
+      DOMAIN: ${CADDY_DOMAIN:?}
+      HOST_MACHINE_HOSTNAME: ${CADDY_HOST_MACHINE_HOSTNAME:?}
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/caddy.env
+    networks:
+      homelab-network:
+      authentik-network:
+      ridash-network:
+        aliases:
+          - rida.sh-bun
