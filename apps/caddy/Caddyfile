@@ -9,11 +9,6 @@
 *.{env.DOMAIN}, {env.DOMAIN} {
     import cloudflare
     
-    @pihole host pihole.{env.DOMAIN}
-    handle @pihole {
-        reverse_proxy {env.HOST_MACHINE_HOSTNAME}:22339
-    }
-    
     @jellyfin host jellyfin.{env.DOMAIN}
     handle @jellyfin {
         reverse_proxy jellyfin:8096
@@ -22,11 +17,6 @@
     @jellyseerr host jellyseerr.{env.DOMAIN}
     handle @jellyseerr {
         reverse_proxy jellyseerr:5055
-    }
-    
-    @ollama host ollama.{env.DOMAIN}
-    handle @ollama {
-        reverse_proxy ollama:11434
     }
     
     @openwebui host open-webui.{env.DOMAIN}
