@@ -91,19 +91,6 @@
         }
     }
 
-    @keeper host keeper.{env.DOMAIN}
-    handle @keeper {
-        handle /api/* {
-            reverse_proxy keeper:3001 {
-                flush_interval -1
-            }
-	}
-
-	handle {
-            reverse_proxy keeper:3000
-        }
-    }
-
     @grafana host grafana.{env.DOMAIN}
     handle @grafana {
         reverse_proxy grafana:3000
