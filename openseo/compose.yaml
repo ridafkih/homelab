@@ -1,12 +1,8 @@
 # OpenSEO standalone (upstream deploy/standalone/compose.yaml from
 # github.com/every-app/open-seo v0.1.19), run as its own project.
-# Changes from upstream:
-#   - the app image is pinned to 0.1.19 by digest;
-#   - nginx publishes nothing; a Caddy sidecar terminates TLS with the
-#     tailnet certificate and is the only published port, bound to the
-#     tailnet IP. configure.mjs requires an https BETTER_AUTH_URL off loopback.
-# Boot ordering: openseo.service (host/etc/systemd/system) runs `up -d` once
-# docker and the tailnet address are up.
+# Changes from upstream: the app image is pinned to 0.1.19 by digest, and nginx
+# publishes no port; it joins homelab-network as open-seo so the main Caddy
+# serves it at open-seo.rida.sh like the other tools (tailnet clients only).
 name: openseo
 x-app: &app
   image: ${OPENSEO_IMAGE:-ghcr.io/every-app/open-seo-standalone:0.1.19@sha256:6e774cc3acb679d9aa7303a1c1851267312e828bbb5c0208dbafdcca2ba7337e}
@@ -86,25 +82,20 @@ services:
         target: /etc/nginx/conf.d
         read_only: true
         volume: { nocopy: true }
+    networks:
+      default:
+      homelab:
+        aliases: [open-seo]
     depends_on:
       init: { condition: service_completed_successfully }
       crawl-gateway: { condition: service_started }
-    restart: unless-stopped
-  tls:
-    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
-    ports: ["${BIND_ADDRESS:?Set BIND_ADDRESS in .env}:${PORT:?Set PORT in .env}:${PORT}"]
-    environment:
-      SITE_ADDRESS: ${BETTER_AUTH_URL}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
-      - tls-data:/data
-    depends_on:
-      web: { condition: service_started }
     restart: unless-stopped
 volumes:
   storage:
   runtime:
   config:
   web-config:
-  tls-data:
+networks:
+  homelab:
+    name: homelab_homelab-network
+    external: true
