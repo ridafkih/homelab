@@ -113,5 +113,12 @@
     handle @signoz {
         reverse_proxy signoz:8080
     }
+
+    @openseo host open-seo.{env.DOMAIN}
+    handle @openseo {
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48 172.19.0.1 172.20.0.1
+        abort @outside_tailnet
+        reverse_proxy open-seo:80
+    }
 }
 

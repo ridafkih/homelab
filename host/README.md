@@ -19,7 +19,7 @@ Files under `host/` mirror their path on the Arch host (`host/etc/fstab` is `/et
 
 ## OpenSEO
 
-- `etc/systemd/system/openseo.service` runs `docker compose up -d --wait` for `/home/rida/homelab/openseo` after docker.service (so after the NVIDIA units) and once tailscale0 holds 100.100.81.126. The stack publishes only on that address, which docker cannot bind before Tailscale is up.
+- `openseo/` is its own Compose project. Its nginx publishes no port and joins `homelab-network` as `open-seo`; the main Caddy serves it at `open-seo.rida.sh` like the other tools. It runs without sign-in, so its Caddy route also refuses LAN IPv4 clients; tailnet traffic reaches Caddy masqueraded to the Docker bridge gateways, which the route allows.
 
 ## Backups
 
