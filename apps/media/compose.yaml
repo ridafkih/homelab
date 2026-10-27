@@ -1,1 +1,97 @@
-services: {}
+services:
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest@sha256:b3b00047ed20f6ce2b16780145cb6a0acb51c9e28ea6aa6f5dcd33c7034f1797
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/prowlarr:/config
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  sonarr:
+    image: linuxserver/sonarr:latest@sha256:48e36b608b461273b9dae857725cd0561a127f2c694b687318f6d0c5ce63e5c9
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/sonarr:/config
+      - /data/media/shows:/shows
+      - /data/media/downloads:/downloads
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  radarr:
+    image: linuxserver/radarr:latest@sha256:084b3b2ab1d0ef930660727259546a241f2bdf67c9ed085d54bf1486a6887c9b
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/radarr:/config
+      - /data/media/movies:/movies
+      - /data/media/downloads:/downloads
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest@sha256:946dc8c5bb5331418eac60050cf40a63cb8f66ac039841dda493870e3559799c
+    container_name: bazarr
+    environment:
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/bazarr:/config
+      - /data/media/movies:/movies
+      - /data/media/shows:/shows
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest@sha256:75ecbb1c89ab7b0a21c4bde40b4820e4f1649d2d56d83b91913422155e8d2a5f
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Toronto
+      - WEBUI_PORT=8080
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/qbittorrent:/config
+      - /data/media/downloads:/downloads
+    restart: unless-stopped
+    networks:
+      - homelab-network
+
+  qui:
+    image: ghcr.io/autobrr/qui:main@sha256:eebb8c93a3654ce2ecc7edcd4ace9d96d4c2f3bba1df9bab13543cee6eefcaea
+    container_name: qui
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/qui:/config
+    networks:
+      - homelab-network
+
+  jellyseerr:
+    image: ghcr.io/seerr-team/seerr:latest@sha256:d8fab675b55ad293ded98fd71efcfd46054cbad9746534ae1cc4794a88c0b3be
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=America/Toronto
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/jellyseerr/config:/app/config
+    restart: unless-stopped
+    networks:
+      - homelab-network

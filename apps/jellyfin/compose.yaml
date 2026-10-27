@@ -1,1 +1,17 @@
-services: {}
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
+    container_name: jellyfin
+    user: "1000:1000"
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/jellyfin/config:/config
+      - ${HOMELAB_DATA_DIR:?}/jellyfin/cache:/cache
+      - /data/media/:/media
+    restart: always
+    devices:
+      - nvidia.com/gpu=all
+    environment:
+      PUID: 1000
+      PGID: 1000
+    networks:
+      - homelab-network
