@@ -1,1 +1,17 @@
-services: {}
+services:
+  ridash-cloudflared:
+    image: cloudflare/cloudflared:latest@sha256:1b1d34d0a9c0bfca9de72db8460d328db3f19edd2b96169114e3e893a97bbe53
+    container_name: ridash-cloudflared
+    restart: unless-stopped
+    command: tunnel --protocol http2 run
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      - ridash-network
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/ridash.env
+
+networks:
+  ridash-network:
+    driver: bridge
