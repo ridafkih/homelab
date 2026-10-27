@@ -53,5 +53,5 @@ in
     device = "/dev/disk/by-label/nixos";
     fsType = "ext4";
   };
-  boot.loader.systemd-boot.enable = lib.mkOverride 1500 true;
+  boot.loader.systemd-boot.enable = true;
 }
