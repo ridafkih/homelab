@@ -1,1 +1,271 @@
-services: {}
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest@sha256:340c9ca6a36617084c6661bdc4f0fe92b7cda5a805d61673ec8db375fddc522b
+    container_name: otel-collector
+    restart: unless-stopped
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    env_file: ${HOMELAB_SECRETS_DIR:?}/otel.env
+    depends_on:
+      - tempo
+      - loki
+    networks:
+      - homelab-network
+
+  tempo:
+    image: grafana/tempo:2.6.1@sha256:ef4384fce6e8ad22b95b243d8fc165628cda655376fd50e7850536ad89d71d50
+    container_name: tempo
+    restart: unless-stopped
+    command: ["-config.file", "/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo:/var/tempo
+    networks:
+      - homelab-network
+
+  prometheus:
+    image: prom/prometheus:latest@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:?}"
+      - "--web.enable-remote-write-receiver"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+    networks:
+      - homelab-network
+
+  loki:
+    image: grafana/loki:latest@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+    container_name: loki
+    restart: unless-stopped
+    command: ["-config.file", "/etc/loki/loki.yaml"]
+    volumes:
+      - ./config/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki:/loki
+    networks:
+      - homelab-network
+
+  grafana:
+    image: grafana/grafana:latest@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    container_name: grafana
+    restart: unless-stopped
+    env_file: ${HOMELAB_SECRETS_DIR:?}/grafana.env
+    environment:
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - grafana:/var/lib/grafana
+    depends_on:
+      - tempo
+      - prometheus
+      - loki
+    networks:
+      - homelab-network
+
+  grafana-funnel:
+    image: tailscale/tailscale:latest@sha256:b11583ad2e93e4671128538c88cf11f460444a5d7e449311dd1933a400ab849d
+    container_name: tailscale-funnel
+    restart: unless-stopped
+    hostname: otel-funnel
+    env_file: ${HOMELAB_SECRETS_DIR:?}/tailscale-funnel.env
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - grafana-funnel:/var/lib/tailscale
+      - ./config/tailscale-serve.json:/config/serve.json:ro
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    networks:
+      - homelab-network
+
+  signoz-init-clickhouse:
+    image: clickhouse/clickhouse-server:25.12.5@sha256:cacf32d6884291dc2ff5e0156a97f46fc53ff7c929a7906d114e268a929dfd3a
+    container_name: signoz-init-clickhouse
+    restart: on-failure
+    command:
+      - bash
+      - -c
+      - |
+        version="v0.0.1"
+        node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+        node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+        echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
+        cd /tmp
+        wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+        tar -xvzf histogram-quantile.tar.gz
+        mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    volumes:
+      - signoz-clickhouse-scripts:/var/lib/clickhouse/user_scripts
+    networks:
+      - signoz-network
+
+  signoz-zookeeper:
+    image: signoz/zookeeper:3.7.1@sha256:fcc4a3288154ccaa3bdb5ae6dc10180c084d29a8a6a26b62ac8e30a8940dc2e6
+    container_name: signoz-zookeeper
+    restart: unless-stopped
+    user: root
+    environment:
+      - ZOO_SERVER_ID=1
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_AUTOPURGE_INTERVAL=1
+      - ZOO_ENABLE_PROMETHEUS_METRICS=yes
+      - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
+    volumes:
+      - signoz-zookeeper:/bitnami/zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      signoz-network:
+        aliases:
+          - zookeeper-1
+
+  signoz-clickhouse:
+    image: clickhouse/clickhouse-server:25.12.5@sha256:cacf32d6884291dc2ff5e0156a97f46fc53ff7c929a7906d114e268a929dfd3a
+    container_name: signoz-clickhouse
+    restart: unless-stopped
+    tty: true
+    environment:
+      - CLICKHOUSE_SKIP_USER_SETUP=1
+    depends_on:
+      signoz-init-clickhouse:
+        condition: service_completed_successfully
+      signoz-zookeeper:
+        condition: service_healthy
+    volumes:
+      - ./config/signoz/clickhouse-config.xml:/etc/clickhouse-server/config.xml:ro
+      - ./config/signoz/clickhouse-users.xml:/etc/clickhouse-server/users.xml:ro
+      - ./config/signoz/clickhouse-custom-function.xml:/etc/clickhouse-server/custom-function.xml:ro
+      - ./config/signoz/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - signoz-clickhouse-scripts:/var/lib/clickhouse/user_scripts
+      - signoz-clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      signoz-network:
+        aliases:
+          - clickhouse
+
+  signoz-telemetrystore-migrator:
+    image: signoz/signoz-otel-collector:v0.144.8@sha256:6d1a59bc553e041014597eff0970608948c5c7447aaa984c4d109f2bc9f4062c
+    container_name: signoz-telemetrystore-migrator
+    restart: on-failure
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    environment:
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=true
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate bootstrap &&
+        /signoz-otel-collector migrate sync up &&
+        /signoz-otel-collector migrate async up
+    networks:
+      - signoz-network
+
+  signoz:
+    image: signoz/signoz:v0.138.0@sha256:0061009f21bf976a5374b6f73f98aa96f6f335d3ac753d6a792c6b3dc91a2328
+    container_name: signoz
+    restart: unless-stopped
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    env_file: ${HOMELAB_SECRETS_DIR:?}/signoz.env
+    environment:
+      - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+    volumes:
+      - signoz-sqlite:/var/lib/signoz
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - signoz-network
+      - homelab-network
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:v0.144.8@sha256:6d1a59bc553e041014597eff0970608948c5c7447aaa984c4d109f2bc9f4062c
+    container_name: signoz-otel-collector
+    restart: unless-stopped
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+      signoz-telemetrystore-migrator:
+        condition: service_completed_successfully
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate sync check &&
+        /signoz-otel-collector --config=/etc/otel-collector-config.yaml --manager-config=/etc/manager-config.yaml --copy-path=/var/tmp/collector-config.yaml
+    volumes:
+      - ./config/signoz/otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+      - ./config/signoz/otel-collector-opamp.yaml:/etc/manager-config.yaml:ro
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_REPLICATION=true
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    ports:
+      - "4327:4317"
+      - "4328:4318"
+    networks:
+      - signoz-network
+      - homelab-network
+
+volumes:
+  tempo:
+    driver: local
+  prometheus:
+    driver: local
+  loki:
+    driver: local
+  grafana:
+    driver: local
+  grafana-funnel:
+    driver: local
+  signoz-clickhouse:
+    driver: local
+  signoz-clickhouse-scripts:
+    driver: local
+  signoz-zookeeper:
+    driver: local
+  signoz-sqlite:
+    driver: local
+
+networks:
+  signoz-network:
+    driver: bridge
