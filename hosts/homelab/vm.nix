@@ -200,7 +200,7 @@ in
           jq --slurpfile spec ${tiersJson} --arg tier "$tier" --arg down "$down" '
             ($spec[0].tiers[$tier] - [$down]) as $members
             | {services: ([.services | keys[] | select(. as $name | $members | index($name) | not)]
-                | map({key: ., value: {scale: 0}}) | from_entries)}' ${stateDir}/homelab.json > ${tierFile}
+                | map({key: ., value: {profiles: ["homelab-smoke-off"]}}) | from_entries)}' ${stateDir}/homelab.json > ${tierFile}
         '';
       };
 
@@ -462,7 +462,7 @@ in
         };
 
         homelab-smoke-tier = {
-          description = "Scale every service outside the smoke tier to zero";
+          description = "Park every service outside the smoke tier in an inactive profile";
           requiredBy = [ "homelab-compose.service" ];
           before = [ "homelab-compose.service" ];
           after = [ "homelab-vm-checkout.service" ];
