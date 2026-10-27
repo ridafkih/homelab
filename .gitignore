@@ -2,3 +2,10 @@
 .git/
 .data/
 .env.removed
+.env.*
+!*.example
+*.before-*
+*.bak
+result
+result-*
+*.qcow2
