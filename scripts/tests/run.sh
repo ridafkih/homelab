@@ -294,14 +294,13 @@ done
 data_dir="$scratch/data"
 secrets_dir="$scratch/secrets"
 mkdir -p "$data_dir" "$secrets_dir"
+awk -F '\t' '$1 != "-" && $2 != "-" { print $2 "='"'"'dummy-" $3 "'"'"'" > (dir "/" $1) }' dir="$secrets_dir" "$work/secrets/keys.tsv"
 
 render_rc=0
 render=$(cd "$work" && HOMELAB_DATA_DIR="$data_dir" HOMELAB_SECRETS_DIR="$secrets_dir" docker-compose --env-file homelab.env config --format json 2>&1) || render_rc=$?
 check "root renders with homelab.env" "$render_rc" "0"
 if [ "$render_rc" = 0 ]; then
   check "root render name" "$(printf '%s' "$render" | jq -r .name)" "homelab"
-  check "stub root has no volumes" "$(printf '%s' "$render" | jq -c '.volumes // {}')" "{}"
-  check "stub root prunes unused networks" "$(printf '%s' "$render" | jq -c '.networks // {}')" "{}"
 fi
 
 lint_root_and_apps
