@@ -1,0 +1,28 @@
+name: fixture-compliant
+
+services:
+  app:
+    image: docker.io/library/busybox:1.37.0@sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
+    container_name: fixture-compliant-app
+    command: ["sh", "-c", "test -n \"$${ADGUARD_USER:?}\" && echo ${CADDY_DOMAIN:?} ${CADDY_HOST_MACHINE_HOSTNAME?required}"]
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/caddy.env
+    environment:
+      RETENTION: ${PROMETHEUS_RETENTION:?}
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/app:/data
+      - ${HOMELAB_DATA_DIR:?}/authentik/media:/media
+      - ${SEAFILE_DATA_PATH:?}:/shared
+      - ./config/app.conf:/etc/app.conf:ro
+      - /data/media:/media-ro:ro
+      - app-cache:/cache
+      - type: bind
+        source: ./Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+    networks:
+      - homelab-network
+
+volumes:
+  app-cache:
+    driver: local
