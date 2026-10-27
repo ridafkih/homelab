@@ -1,1 +1,4 @@
-{ homelab.secrets.sopsFile = ../../secrets/homelab.yaml; }
+{ lib, ... }:
+{
+  homelab.secrets.sopsFile = lib.mkDefault ../../secrets/homelab.yaml;
+}
