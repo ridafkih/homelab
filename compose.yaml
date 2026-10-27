@@ -383,62 +383,6 @@ services:
       - seafile-network
       - homelab-network
 
-  keeper-postgres:
-    restart: unless-stopped
-    image: postgres:17
-    container_name: keeper-postgres
-    environment:
-      POSTGRES_USER: ${KEEPER_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${KEEPER_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${KEEPER_POSTGRES_DATABASE}
-    volumes:
-      - keeper-database:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keeper -d keeper"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - homelab-network
-
-  keeper-redis:
-    restart: unless-stopped
-    image: redis:7-alpine
-    container_name: keeper-redis
-    volumes:
-      - keeper-redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - homelab-network
-
-  keeper:
-    restart: unless-stopped
-    image: ghcr.io/ridafkih/keeper-services:latest
-    container_name: keeper
-    environment:
-      DATABASE_URL: ${KEEPER_DATABASE_URL}
-      REDIS_URL: ${KEEPER_REDIS_URL}
-      WEBSOCKET_URL: ${KEEPER_WEBSOCKET_URL}
-      BETTER_AUTH_URL: ${KEEPER_BETTER_AUTH_URL}
-      BETTER_AUTH_SECRET: ${KEEPER_BETTER_AUTH_SECRET}
-      ENCRYPTION_KEY: ${KEEPER_ENCRYPTION_KEY}
-      COMMERCIAL_MODE: false
-      GOOGLE_CLIENT_ID: ${KEEPER_GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${KEEPER_GOOGLE_CLIENT_SECRET:-}
-      MICROSOFT_CLIENT_ID: ${KEEPER_MICROSOFT_CLIENT_ID:-}
-      MICROSOFT_CLIENT_SECRET: ${KEEPER_MICROSOFT_CLIENT_SECRET:-}
-    depends_on:
-      keeper-postgres:
-        condition: service_healthy
-      keeper-redis:
-        condition: service_healthy
-    networks:
-      - homelab-network
-
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
@@ -691,10 +635,6 @@ services:
 
 volumes:
   seafile-database:
-    driver: local
-  keeper-database:
-    driver: local
-  keeper-redis:
     driver: local
   authentik-database:
     driver: local
