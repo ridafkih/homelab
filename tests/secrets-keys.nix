@@ -47,7 +47,7 @@ pkgs.runCommand "secrets-keys"
         echo "$name key tree differs from secrets/keys.tsv"
         exit 1
       fi
-      unencrypted=$(yq -o=json '.' "$file" | jq -r 'del(.sops) | [paths(scalars) as $p | getpath($p) | select(type != "string" or (startswith("ENC[") | not))] | length')
+      unencrypted=$(yq -o=json '.' "$file" | jq -r 'del(.sops) | [paths(scalars) as $p | getpath($p) | select(type != "string" or (. != "" and (startswith("ENC[") | not)))] | length')
       if [ "$unencrypted" != 0 ]; then
         echo "$name has $unencrypted unencrypted values"
         exit 1

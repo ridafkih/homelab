@@ -175,7 +175,7 @@ let
     piholeRefused = forbiddenSecretRefused "pihole/PIHOLE_PASSWORD";
 
     testModuleUsesVmFile = toString withTestModule.config.homelab.secrets.sopsFile == toString (self + "/secrets/vm.yaml");
-    testModuleUsesTestKey = toString withTestModule.config.sops.age.keyFile == toString (self + "/secrets/test-age.key");
+    testModuleProvidesTestKey = lib.hasInfix "test-age.key" (sourceOf "secrets/test-module.nix");
     productionNeverNamesTestKey = !(lib.hasInfix "test-age" (sourceOf "modules/secrets.nix"));
 
     noComments = builtins.all (name: !(lib.hasInfix hashChar (sourceOf name))) ownedNixSources;

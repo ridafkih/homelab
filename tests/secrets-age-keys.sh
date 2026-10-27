@@ -47,7 +47,7 @@ if test -d "$admin_dir"; then
   [ "$others" = 0 ] || fail "admin key dir holds $others files besides age.key"
 fi
 
-test_recipient=$(age-keygen -y secrets/test-age.key)
+test_recipient=$(age-keygen -y secrets/test-age.key 2>/dev/null || fail "missing or unreadable secrets/test-age.key")
 sops_recipients=$(grep -oE 'age1[0-9a-z]{58}' .sops.yaml | sort -u | grep -vxF "$test_recipient" || true)
 [ "$(wc -l <<< "$sops_recipients" | tr -d ' ')" = 2 ] || fail ".sops.yaml must name exactly two production recipients"
 
