@@ -1,1 +1,35 @@
-services: {}
+services:
+  adguard-init:
+    image: alpine:latest@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+    container_name: adguardhome-init
+    command:
+      - sh
+      - -euc
+      - |
+        : "$${ADGUARD_USER:?missing from .env}"
+        : "$${ADGUARD_PASSWORD_HASH:?missing from .env}"
+        sed -e "s|__ADGUARD_USER__|$${ADGUARD_USER}|g" \
+            -e "s|__ADGUARD_PASSWORD_HASH__|$${ADGUARD_PASSWORD_HASH}|g" \
+            /src/AdGuardHome.yaml > /dst/AdGuardHome.yaml
+        if grep -q '__ADGUARD_' /dst/AdGuardHome.yaml; then
+          echo "error: unsubstituted placeholder remains" >&2; exit 1
+        fi
+        echo "rendered AdGuardHome.yaml"
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/adguard.env
+    volumes:
+      - ./AdGuardHome.yaml:/src/AdGuardHome.yaml:ro
+      - ${HOMELAB_DATA_DIR:?}/adguardhome/conf:/dst
+
+  adguard:
+    image: adguard/adguardhome:latest@sha256:aba9e3bf0613be3ba3755e1fc311b126e2c24bec25e18b6483894a88283074f0
+    container_name: adguardhome
+    restart: unless-stopped
+    depends_on:
+      adguard-init:
+        condition: service_completed_successfully
+    network_mode: host
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/adguardhome/work:/opt/adguardhome/work
+      - ${HOMELAB_DATA_DIR:?}/adguardhome/conf:/opt/adguardhome/conf
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
