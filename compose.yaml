@@ -96,10 +96,14 @@ services:
     env_file:
       - .env
     image: ghcr.io/goauthentik/server:2025.8.4
+    environment:
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
     restart: unless-stopped
     volumes:
       - ./.authentik/media:/media
       - ./.authentik/custom-templates:/templates
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
     networks:
       - authentik-network
 
@@ -114,6 +118,9 @@ services:
     env_file:
       - .env
     image: ghcr.io/goauthentik/server:2025.8.4
+    environment:
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
     restart: unless-stopped
     user: root
     volumes:
@@ -121,6 +128,7 @@ services:
       - ./.authentik/media:/media
       - ./.authentik/certs:/certs
       - ./.authentik/custom-templates:/templates
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
     networks:
       - authentik-network
 
@@ -174,6 +182,7 @@ services:
     volumes:
       - .data/adguardhome/work:/opt/adguardhome/work
       - .data/adguardhome/conf:/opt/adguardhome/conf
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -184,6 +193,7 @@ services:
       - TZ=America/Toronto
     volumes:
       - .data/prowlarr:/config
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
     restart: unless-stopped
     networks:
       - homelab-network
@@ -222,6 +232,8 @@ services:
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr
     environment:
+      - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
       - PUID=1000
       - PGID=1000
       - TZ=America/Toronto
@@ -229,6 +241,7 @@ services:
       - .data/bazarr:/config
       - /data/media/movies:/movies
       - /data/media/shows:/shows
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
     restart: unless-stopped
     networks:
       - homelab-network
