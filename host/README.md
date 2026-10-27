@@ -17,8 +17,13 @@ Files under `host/` mirror their path on the Arch host (`host/etc/fstab` is `/et
 - `etc/systemd/system/nvidia-docker-arch.service` creates the NVIDIA device nodes and regenerates `/etc/cdi/nvidia.yaml` before `docker.service` starts, so `restart: always` GPU containers find a current CDI spec and `/dev/nvidiactl` at boot. The toolkit runtime config and CDI mode are persisted and no longer rewritten at boot.
 - `etc/systemd/system/jellyfin-ensure.service` is the old retry workaround. Remove it once a reboot shows Jellyfin starting without it.
 
+## OpenSEO
+
+- `etc/systemd/system/openseo.service` runs `docker compose up -d --wait` for `/home/rida/homelab/openseo` after docker.service (so after the NVIDIA units) and once tailscale0 holds 100.100.81.126. The stack publishes only on that address, which docker cannot bind before Tailscale is up.
+
 ## Backups
 
 - `usr/local/sbin/homelab-backup` (run nightly at 03:30 by `homelab-backup.timer`) dumps the authentik, Keeper and Seafile databases, then backs up system config, the home directory and the dumps with restic. Exclusions are in `etc/homelab-backup/excludes`: media, models, caches, logs and regenerable metadata stay out.
 - There are two repositories, `/mnt/disk1/backup/restic` and `/mnt/disk2/backup/restic`. Each holds the system set plus the Seafile files from the other disk, so either disk can fail without losing Seafile data. A Seafile restore merges both halves back into `/data/seafile`.
 - The repository password is `/root/.config/restic/homelab.pass`, with copies at `/mnt/disk{1,2}/backup/restic.pass`. None of this is off-site yet.
+- OpenSEO: the backup stops its app containers for about 40 seconds, archives the `storage` and `config` volumes to `/var/backups/homelab-db/openseo` in the upstream `scripts/celld/backup.mjs` format (restore with `node scripts/celld/backup.mjs restore DIR` from an open-seo checkout, `COMPOSE_FILE=/home/rida/homelab/openseo/compose.yaml`), then starts them again. Its `.env` is covered by `/home/rida`.
