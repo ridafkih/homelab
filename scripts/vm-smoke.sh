@@ -62,9 +62,16 @@ trap cleanup EXIT
 cleanup
 
 cat > "$state/scope.sh" <<'EOF'
+cgroup=/sys/fs/cgroup$(cut -d: -f3 /proc/self/cgroup)
+echo 0 > "$2/anon.peak"
+while :; do
+  awk -v file="$2/anon.peak" '$1 == "anon" { getline peak < file; if ($2 > peak) print $2 > file }' "$cgroup/memory.stat"
+  sleep 5
+done &
+sampler=$!
 nice -n19 ionice -c3 timeout 40m "$1" < /dev/null > "$2/serial.log" 2>&1
 code=$?
-cgroup=/sys/fs/cgroup$(cut -d: -f3 /proc/self/cgroup)
+kill "$sampler"
 cat "$cgroup/memory.peak" > "$2/memory.peak"
 awk '$1 == "oom_kill" { print $2 }' "$cgroup/memory.events" > "$2/oom_kill"
 exit "$code"
@@ -112,7 +119,7 @@ kernel_params() {
 }
 
 measurements=$state/measurements.tsv
-[ -s "$measurements" ] || printf 'date\tcommit\tboot\tdown\tverdict\tguest_peak_mib\thost_peak_mib\thost_oom_kill\tsettle_seconds\tqemu_exit\n' > "$measurements"
+[ -s "$measurements" ] || printf 'date\tcommit\tboot\tdown\tverdict\tguest_peak_mib\thost_anon_peak_mib\thost_peak_mib\thost_oom_kill\tsettle_seconds\tqemu_exit\n' > "$measurements"
 commit=$(git rev-parse --short HEAD)
 overall=0
 
@@ -130,6 +137,7 @@ for boot in $boots; do
 
   summary=$dir/tmp/xchg/summary.tsv
   host_peak_mib=$(( $(cat "$dir/memory.peak") / 1048576 ))
+  host_anon_peak_mib=$(( $(cat "$dir/anon.peak") / 1048576 ))
   host_oom=$(cat "$dir/oom_kill")
   verdict=missing
   guest_peak=none
@@ -145,10 +153,10 @@ for boot in $boots; do
   fi
   [ -n "$verdict" ] || verdict=missing
 
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$commit" "$boot" "$down_label" "$verdict" "$guest_peak" "$host_peak_mib" "$host_oom" "$settle" "$qemu_exit" \
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$commit" "$boot" "$down_label" "$verdict" "$guest_peak" "$host_anon_peak_mib" "$host_peak_mib" "$host_oom" "$settle" "$qemu_exit" \
     >> "$measurements"
-  echo "== $boot: verdict=$verdict guest_peak_mib=$guest_peak host_peak_mib=$host_peak_mib host_oom_kill=$host_oom settle_seconds=$settle qemu_exit=$qemu_exit"
+  echo "== $boot: verdict=$verdict guest_peak_mib=$guest_peak host_anon_peak_mib=$host_anon_peak_mib host_peak_mib=$host_peak_mib host_oom_kill=$host_oom settle_seconds=$settle qemu_exit=$qemu_exit"
 
   rm -f "$dir"/*.qcow2
   rm -rf "$dir/tmp"
