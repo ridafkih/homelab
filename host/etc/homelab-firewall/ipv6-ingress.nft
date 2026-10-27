@@ -1,0 +1,9 @@
+table ip6 homelab_ingress
+delete table ip6 homelab_ingress
+
+table ip6 homelab_ingress {
+	chain input {
+		type filter hook input priority filter - 10; policy accept;
+		iifname "eno1" ip6 saddr != fd7a:115c:a1e0::/48 tcp dport { 80, 443 } drop
+	}
+}
