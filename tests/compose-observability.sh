@@ -283,9 +283,11 @@ else
 fi
 
 if [ -n "$live_host" ]; then
+  containers=$(cut -f 2 "$scratch/pins.tsv" | tr '\n' ' ')
+  ssh -n -o BatchMode=yes "$live_host" "for c in $containers; do printf '%s\t' \"\$c\"; docker image inspect -f '{{json .RepoDigests}}' \"\$(docker inspect -f '{{.Image}}' \"\$c\")\"; done" > "$scratch/live.tsv" 2> "$scratch/live.err" || true
   while read -r svc container pin; do
-    running=$(ssh -n -o BatchMode=yes "$live_host" "docker image inspect -f '{{json .RepoDigests}}' \$(docker inspect -f '{{.Image}}' $container)" 2>/dev/null | jq -r --arg r "${pin%%:*}" '.[] | select(startswith($r + "@"))' | head -n 1)
-    check "pin of $svc matches the running $container on $live_host" "${pin#*@}" "${running#*@}"
+    running=$(awk -F '\t' -v c="$container" '$1 == c { print $2 }' "$scratch/live.tsv" | jq -r --arg r "${pin%%:*}" '.[] | select(startswith($r + "@"))' 2>/dev/null | head -n 1)
+    check "pin of $svc matches the running $container on $live_host" "${running#*@}" "${pin#*@}"
   done < "$scratch/pins.tsv"
 fi
 
