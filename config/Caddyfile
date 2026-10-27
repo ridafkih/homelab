@@ -109,3 +109,11 @@
     }
 }
 
+http://{env.DOMAIN} {
+    handle /.well-known/webfinger {
+        header Content-Type application/json
+        respond `{"links":[{"href":"https://authentik.{env.DOMAIN}/application/o/tailscale/","rel":"http://openid.net/specs/connect/1.0/issuer"}],"subject":"acct:rida@{env.DOMAIN}"}` 200
+    }
+
+    respond "Not Found" 404
+}
