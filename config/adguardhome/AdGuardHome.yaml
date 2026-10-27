@@ -120,7 +120,8 @@ filters:
     name: HaGeZi's Pro mini DNS/Browser Blocklist
     id: 1761532487
 whitelist_filters: []
-user_rules: []
+user_rules:
+  - "@@||analyticsdata.googleapis.com^"
 dhcp:
   enabled: false
   interface_name: eno1
