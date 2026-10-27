@@ -221,11 +221,11 @@ let
       virtualisation.docker.enable = true;
       virtualisation.emptyDiskImages = [
         {
-          size = 2048;
+          size = 8192;
           driveConfig.deviceExtraOpts.serial = "disk1";
         }
         {
-          size = 2048;
+          size = 8192;
           driveConfig.deviceExtraOpts.serial = "disk2";
         }
       ];
