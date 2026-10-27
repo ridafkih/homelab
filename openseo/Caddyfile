@@ -1,0 +1,8 @@
+{
+	admin off
+	auto_https disable_redirects
+}
+
+{$SITE_ADDRESS} {
+	reverse_proxy web:80
+}

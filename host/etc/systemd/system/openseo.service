@@ -1,0 +1,15 @@
+[Unit]
+Description=Start OpenSEO once Docker and the tailnet address are up
+After=docker.service tailscaled.service nvidia-docker-arch.service
+Requires=docker.service
+Wants=tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/timeout 300 /bin/sh -c 'until /usr/bin/ip -4 -o addr show dev tailscale0 | /usr/bin/grep -q " 100.100.81.126/"; do sleep 2; done'
+ExecStart=/usr/bin/docker compose --project-directory /home/rida/homelab/openseo up -d --wait
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
