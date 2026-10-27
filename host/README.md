@@ -17,6 +17,10 @@ Files under `host/` mirror their path on the Arch host (`host/etc/fstab` is `/et
 - `etc/systemd/system/nvidia-docker-arch.service` creates the NVIDIA device nodes and regenerates `/etc/cdi/nvidia.yaml` before `docker.service` starts, so `restart: always` GPU containers find a current CDI spec and `/dev/nvidiactl` at boot. The toolkit runtime config and CDI mode are persisted and no longer rewritten at boot.
 - `etc/systemd/system/jellyfin-ensure.service` is the old retry workaround. Remove it once a reboot shows Jellyfin starting without it.
 
+## Firewall
+
+- `etc/homelab-firewall/ipv6-ingress.nft`, loaded by `etc/systemd/system/homelab-ipv6-ingress.service` before the network and Docker come up, drops IPv6 arriving on eno1 for TCP 80 and 443 unless it comes from the tailnet. Docker publishes Caddy through docker-proxy on `[::]`, so IPv6 hits the host INPUT hook, not DOCKER-USER. It is its own nftables table, so Docker, Tailscale and IPv4 rules are untouched.
+
 ## OpenSEO
 
 - `openseo/` is its own Compose project. Its nginx publishes no port and joins `homelab-network` as `open-seo`; the main Caddy serves it at `open-seo.rida.sh` like the other tools. It runs without sign-in, so its Caddy route also refuses LAN IPv4 clients; tailnet traffic reaches Caddy masqueraded to the Docker bridge gateways, which the route allows.
