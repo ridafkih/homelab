@@ -1,1 +1,119 @@
-services: {}
+services:
+  authentik-postgresql:
+    container_name: authentik-postgresql
+    environment:
+      POSTGRES_DB: ${AUTHENTIK_POSTGRESQL__NAME:?}
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/authentik.env
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      timeout: 5s
+    image: docker.io/library/postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    restart: unless-stopped
+    volumes:
+      - authentik-database:/var/lib/postgresql/data
+    networks:
+      - authentik-network
+
+  authentik-redis:
+    container_name: authentik-redis
+    command: --save 60 1 --loglevel warning
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - redis-cli ping | grep PONG
+      timeout: 3s
+    image: docker.io/library/redis:alpine@sha256:47b08295737773de3b711fb86f13ae802f5074e96a9a2d29f5f80164ac08c046
+    restart: unless-stopped
+    volumes:
+      - authentik-redis:/data
+    networks:
+      - authentik-network
+
+  authentik-server:
+    container_name: authentik-server
+    command: server
+    depends_on:
+      authentik-postgresql:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/authentik.env
+    image: ghcr.io/goauthentik/server:2025.8.4@sha256:a10398480e7f8292dbcc27b64fe572f6abed6220bd40f4b6d28e9c12d4b78dca
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: ${AUTHENTIK_POSTGRESQL__HOST:?}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRESQL__NAME:?}
+      AUTHENTIK_REDIS__HOST: ${AUTHENTIK_REDIS__HOST:?}
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+    restart: unless-stopped
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/authentik/media:/media
+      - ${HOMELAB_DATA_DIR:?}/authentik/custom-templates:/templates
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
+    networks:
+      - authentik-network
+
+  authentik-worker:
+    container_name: authentik-worker
+    command: worker
+    depends_on:
+      authentik-postgresql:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/authentik.env
+    image: ghcr.io/goauthentik/server:2025.8.4@sha256:a10398480e7f8292dbcc27b64fe572f6abed6220bd40f4b6d28e9c12d4b78dca
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: ${AUTHENTIK_POSTGRESQL__HOST:?}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRESQL__NAME:?}
+      AUTHENTIK_REDIS__HOST: ${AUTHENTIK_REDIS__HOST:?}
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+    restart: unless-stopped
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOMELAB_DATA_DIR:?}/authentik/media:/media
+      - ${HOMELAB_DATA_DIR:?}/authentik/certs:/certs
+      - ${HOMELAB_DATA_DIR:?}/authentik/custom-templates:/templates
+      - /etc/homelab-ca/certs:/etc/ssl/certs:ro
+    networks:
+      - authentik-network
+
+  authentik-cloudflared:
+    image: cloudflare/cloudflared:latest@sha256:1b1d34d0a9c0bfca9de72db8460d328db3f19edd2b96169114e3e893a97bbe53
+    container_name: authentik-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      - authentik-network
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/authentik-tunnel.env
+
+volumes:
+  authentik-database:
+    driver: local
+  authentik-redis:
+    driver: local
+
+networks:
+  authentik-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
