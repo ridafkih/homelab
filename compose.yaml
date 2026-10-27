@@ -16,8 +16,27 @@ services:
       CLOUDFLARE_API_TOKEN: ${CADDY_CLOUDFLARE_API_TOKEN}
       HOST_MACHINE_HOSTNAME: ${CADDY_HOST_MACHINE_HOSTNAME}
     networks:
-      - homelab-network
-      - authentik-network
+      homelab-network:
+      authentik-network:
+      ridash-network:
+        aliases:
+          - rida.sh-bun
+
+  ridash-cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ridash-cloudflared
+    restart: unless-stopped
+    command: tunnel --protocol http2 run
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    networks:
+      ridash-network:
+        gw_priority: 10
+      local-network:
+        gw_priority: 100
+    environment:
+      TUNNEL_TOKEN: ${RIDASH_CLOUDFLARE_TUNNEL_TOKEN}
 
   jellyfin:
     image: jellyfin/jellyfin:latest
@@ -661,6 +680,8 @@ volumes:
 
 networks:
   seafile-network:
+    driver: bridge
+  ridash-network:
     driver: bridge
   authentik-network:
     driver: bridge
