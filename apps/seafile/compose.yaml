@@ -1,1 +1,105 @@
-services: {}
+services:
+  seafile-db:
+    image: mariadb:10.11@sha256:d769e37960821dfdcf096954f6e7ac89f747e116c1bba98e48edd265dfc7deae
+    container_name: seafile-db
+    restart: unless-stopped
+    env_file: ${HOMELAB_SECRETS_DIR:?}/seafile.env
+    environment:
+      MYSQL_LOG_CONSOLE: true
+      MARIADB_AUTO_UPGRADE: 1
+    volumes:
+      - seafile-database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh", "--connect", "--mariadbupgrade", "--innodb_initialized"]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 10
+    networks:
+      - seafile-network
+
+  seafile-redis:
+    image: redis:7-alpine@sha256:6ba19c50b56777f5c11c58eff8ddb69d0d5f27ba131cffb63f180ccfd43c66af
+    container_name: seafile-redis
+    restart: unless-stopped
+    env_file: ${HOMELAB_SECRETS_DIR:?}/seafile.env
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --save '' --appendonly no"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seafile-network
+
+  seafile:
+    image: seafileltd/seafile-mc:13.0-latest@sha256:b0c90832126bf432db908449f1bb450211e6bbf75a2193bab3399e2a9636eccf
+    container_name: seafile
+    restart: unless-stopped
+    volumes:
+      - ${SEAFILE_DATA_PATH:?}:/shared
+    env_file: ${HOMELAB_SECRETS_DIR:?}/seafile.env
+    environment:
+      SEAFILE_MYSQL_DB_HOST: seafile-db
+      SEAFILE_MYSQL_DB_PORT: 3306
+      SEAFILE_MYSQL_DB_USER: seafile
+      SEAFILE_MYSQL_DB_CCNET_DB_NAME: ccnet_db
+      SEAFILE_MYSQL_DB_SEAFILE_DB_NAME: seafile_db
+      SEAFILE_MYSQL_DB_SEAHUB_DB_NAME: seahub_db
+      TIME_ZONE: America/Toronto
+      SEAFILE_SERVER_HOSTNAME: seafile.${CADDY_DOMAIN:?}
+      SEAFILE_SERVER_PROTOCOL: https
+      SITE_ROOT: /
+      NON_ROOT: false
+      SEAFILE_LOG_TO_STDOUT: false
+      ENABLE_GO_FILESERVER: true
+      ENABLE_SEADOC: true
+      SEADOC_SERVER_URL: https://seafile.${CADDY_DOMAIN:?}/sdoc-server
+      CACHE_PROVIDER: redis
+      REDIS_HOST: seafile-redis
+      REDIS_PORT: 6379
+      ENABLE_NOTIFICATION_SERVER: false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      seafile-db:
+        condition: service_healthy
+      seafile-redis:
+        condition: service_started
+    networks:
+      - seafile-network
+      - homelab-network
+
+  seadoc:
+    image: seafileltd/sdoc-server:2.0-latest@sha256:c97025a731ee08d67668edd02ee9d08bb5ebc92fa762d96d2cda91de4c11ad04
+    container_name: seadoc
+    restart: unless-stopped
+    volumes:
+      - ${HOMELAB_DATA_DIR:?}/seadoc:/shared
+    env_file: ${HOMELAB_SECRETS_DIR:?}/seafile.env
+    environment:
+      DB_HOST: seafile-db
+      DB_PORT: 3306
+      DB_USER: seafile
+      DB_NAME: seahub_db
+      TIME_ZONE: America/Toronto
+      NON_ROOT: false
+      SEAHUB_SERVICE_URL: http://seafile
+    depends_on:
+      seafile-db:
+        condition: service_healthy
+    networks:
+      - seafile-network
+      - homelab-network
+
+volumes:
+  seafile-database:
+    driver: local
+
+networks:
+  seafile-network:
+    driver: bridge
