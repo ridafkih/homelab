@@ -80,7 +80,7 @@ mode, env_path, openseo_path = sys.argv[1:4]
 production_file = "secrets/homelab.yaml"
 dropped_pattern = re.compile(r"^(HF_TOKEN|OLLAMA_.*|PIHOLE_.*|SIGNOZ_VERSION|SIGNOZ_OTELCOL_VERSION)$")
 assignment_pattern = re.compile(r"^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$", re.DOTALL)
-non_credentials = {"adguard/ADGUARD_USER", "authentik/AUTHENTIK_POSTGRESQL__USER", "grafana/GRAFANA_ADMIN_USER"}
+non_credentials = {"adguard/ADGUARD_USER", "authentik/AUTHENTIK_POSTGRESQL__USER", "grafana/GRAFANA_ADMIN_USER", "openseo/STORAGE_ACCESS_KEY"}
 restic_secret = "restic/RESTIC_PASSWORD"
 
 problems = []
