@@ -1,0 +1,14 @@
+keys:
+  - &test age15ymzmfr0cksncy5qk9uu36lxret5ghvnvfwxkl3y7qgzqlft99js5gel6u
+  - &host age1ndckxtg3ddc8f34asxk4n95s28cacr0ekqnh82aax0fzsgrk5dws6u3rnr
+  - &admin age1278y9ncnt58ywgqx0jwm5q30tvl3h422r3cwtvyjuclhuuxul4msdsqhp9
+creation_rules:
+  - path_regex: ^secrets/vm\.yaml$
+    key_groups:
+      - age:
+          - *test
+  - path_regex: ^secrets/homelab\.yaml$
+    key_groups:
+      - age:
+          - *host
+          - *admin
