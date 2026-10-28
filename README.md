@@ -1,201 +1,50 @@
 # Homelab
 
-Configuration files and dockerized container configurations for the services I run on my own home lab.
+The Docker Compose setup for my home server, `homelab`, as it runs today on Arch Linux.
 
-## Considerations
+The box is moving to NixOS. The new configuration, with the host declared as a NixOS flake, one folder per app, encrypted secrets, selective on-disk backups and all traffic through Mullvad, is on the [`nixos` branch](https://github.com/ridafkih/homelab/tree/nixos). It replaces this branch when the box is cut over; [docs/cutover.md](https://github.com/ridafkih/homelab/blob/nixos/docs/cutover.md) on that branch is the runbook.
 
-This exact configuration requires an NVIDIA GPU, but modification of the [compose.yaml](./compose.yaml) can remove that requirement by removing references to the NVIDIA runtime.
+## Hardware
 
-## Services
+A Ryzen 7 7800X3D with 64 GB of RAM and an RTX 4080 Super, used headless for Jellyfin transcodes. Arch runs from a 2 TB NVMe, and two hard drives are pooled at `/data` with mergerfs.
 
-### Network
+## What runs
 
-#### Tailscale
+- Caddy: reverse proxy and TLS for the `rida.sh` subdomains, with Cloudflare DNS challenges
+- Authentik: single sign-on, reached from outside through its own Cloudflare tunnel
+- AdGuard Home: DNS for the box and the tailnet
+- Jellyfin: media server, with NVENC on the 4080
+- Prowlarr, Sonarr, Radarr, Bazarr, qBittorrent, qui and Jellyseerr
+- Seafile, with SeaDoc
+- Open WebUI
+- Observability: OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana and SigNoz, with a Tailscale Funnel for OTLP
+- A Cloudflare tunnel for `rida.sh`
+- OpenSEO, as its own Compose project in `openseo/`
+- A Windows 11 VM, kept outside this repo
 
-Tailscale is an easy-to-use VPN configuration, allowing you to securely access your home lab, or any other system on your "tailnet" anywhere without requiring you to expose it to the internet. This simplifies both configuration, as well as the security posture of your configuration significantly.
+Pi-hole, Ollama and Keeper.sh no longer run here.
 
-#### Caddy
+## Layout
 
-Caddy is a reverse-proxy, similar to Nginx without the regular pains of managing an Nginx instance. Caddy easily and automatically configures your certificates and easily routes to services within your Docker network.
-
-#### Pi-hole
-
-Pi-hole is an easily-configurable DNS server that can be used to block or modify DNS requests. It's very useful for network-level analytics & ad-blocking.
-
-### Media
-
-#### Jellyfin
-
-Jellyfin is a great alternative to other popular options, like Plex. It hosts media, doing all the heavy-lifting for serving content to various clients.
-
-As far as clients go, I'd highly recommend [Jellyfin's official companion application for Android](https://play.google.com/store/apps/details?id=org.jellyfin.mobile&hl=en_CA&pli=1) or your Android-compatible television, or the [Streamyfin application on the Apple App Store](https://apps.apple.com/us/app/streamyfin/id6593660679). They are both very well made, and work flawlessly.
-
-### Files
-
-#### Seafile
-
-Seafile is a self-hosted file sync & share server - the closest open-source equivalent to Google Drive. It replaces the previous Samba/NAS setup with something reachable from outside the tailnet, with share links, user accounts and desktop/mobile sync clients.
-
-It is a good fit for large media files specifically: Seafile splits files into content-addressed blocks and only transfers the blocks that changed, so re-uploading a re-exported render only ships the delta rather than the whole file.
-
-Note that Seafile stores data in its own block format under `SEAFILE_DATA_PATH`, not as plain files on disk. Files in a Seafile library are not directly readable by Jellyfin or the *arr stack, and recovering them without a working Seafile install means using Seafile's own export tooling. Libraries you want Jellyfin to serve should be exported to `/data/media` rather than shared out of Seafile.
-
-SeaDoc, Seafile's collaborative document editor, is enabled and served under `/sdoc-server` on the same hostname.
-
-### Artificial Intelligence
-
-#### Ollama
-
-Ollama is an easy-to-use OpenAI API compatible server that can be used to easily mount and serve compatible models to services and clients that have access to your homelab.
-
-#### Open WebUI
-
-Open WebUI is an extensible, and well-crafted UI that is compatible with both Ollama & OpenAI API compatible services. It's great for quickly accessing and interacting with the models you have installed on Ollama.
-
-## Prerequisites
-
-First, start by copying the `.env.example` to a `.env` file in the root directory and configuring it as you wish.
-
-```bash
-cp .env.example .env
+```text
+compose.yaml   every service above except OpenSEO and the Windows VM
+config/        config files the containers mount
+openseo/       the OpenSEO Compose project
+host/          the Arch host's own files: fstab, systemd units, the backup script, the firewall rule
+Makefile       make up, down, restart, pull and ps
+.env.example   the settings and secrets the stack reads from .env
 ```
 
-### Configuring Docker
+## Running it
 
-You can follow Docker's official [installation documentation](https://docs.docker.com/desktop/setup/install/linux/) to get started with installing it. It is vital to this project, which hosts all the services it can inside containers.
-
-### Configuring Tailscale
-
-Tailscale is used to access the home lab remotely, and is baked into this project to serve the DNS resolver to avoid conflicting with the configuration of the host. With that said, you should follow [their official documentation](https://tailscale.com/kb/1031/install-linux) to get started on installing it for your Linux distro.
-
-### Preparing for Jellyfin
-
-The media server mounts a hard-coded directory, where it will be used to access files. Before running Jellyfin, you should mount a directory you plan on storing your media to /data/media/.
-
-### Preparing for Seafile
-
-Seafile needs a storage location, a few secrets, and an initial admin account. Set these in your `.env`.
-
-`SEAFILE_DATA_PATH` is where the block store lives, and is where the bulk of your data will end up. It defaults to `/data/seafile` on the mergerfs pool.
-
-The secrets can be generated with:
-
-```bash
-# JWT signing key - must be at least 32 characters
-openssl rand -base64 32
-
-# Database and cache passwords
-openssl rand -base64 24
-```
-
-```
-SEAFILE_DATA_PATH=/data/seafile
-SEAFILE_ADMIN_EMAIL=you@example.net
-SEAFILE_ADMIN_PASSWORD=********
-SEAFILE_JWT_PRIVATE_KEY=********************************
-SEAFILE_MYSQL_ROOT_PASSWORD=********
-SEAFILE_MYSQL_PASSWORD=********
-SEAFILE_REDIS_PASSWORD=********
-```
-
-The admin email and password are only read on first startup, when the database is initialised. Changing them later has no effect - use the web UI instead.
-
-
-### Preparing for Caddy
-
-#### Cloudflare
-
-Use Cloudflare to manage your DNS, this will allow Caddy to automatically manage your ACME TXT records and the DNS-01 challenge.
-
-Once you've configured Cloudflare to manage your DNS.
-
-1. Click on the Profile icon on the top-right of the Cloudflare dashboard.
-2. Click "API Tokens" on the sidebar.
-3. Click "Create Token"
-4. Under "Permissions" configure the token to be able to read zone information, and edit DNS information.
-   1. Zone, Zone, Read
-   2. Zone, DNS, Edit
-5. Under "Zone Resource" configure the token to be able to access your domain settings.
-   1. Include, Specific zone, example.net
-6. Save your token, and use it for the `CADDY_CLOUDFLARE_API_TOKEN`.
-
-Use the domain of your choice, and in your registrar's DNS settings, configure a single wildcard `A` record under the domain, or subdomain of your choice - pointing to the local (IPv4) address of the home lab on your tailnet. This is the same domain that will be used to access your services.
-
-As an example, if you wanted to serve your home lab to the domain name `example.net`, you would configure your environment variable.
-
-```
-CADDY_CLOUDFLARE_API_TOKEN=********************************
-CADDY_DOMAIN=example.net
-```
-
-#### DNS Settings
-
-Once that's done, configure your domain, or a subdomain of your choice to serve the local IP address of your server on your Tailscale network.
-
-```
-Type        Name        Content            Proxy        TTL
-A           *           100.xxx.xxx.92     DNS only     Auto
-```
-
-With all said and done, Caddy will be able to automatically add the ACME TXT records, and manage TLS for the services. You can access the services under the subdomains of your `CADDY_DOMAIN`.
-
-- pihole.example.net
-- jellyfin.example.net
-- ollama.example.net
-- open-webui.example.net
-- seafile.example.net
-
-These can be configured in [the Caddyfile](./config/Caddyfile)
-
-## Usage
-
-```bash
-# Start all services
-make up
-
-# Start specific profiles
-docker compose --profile network up -d
-docker compose --profile media up -d
-docker compose --profile ai up -d
-
-# Stop all services
-make down
-```
-
-## Getting Started
-
-Once you've configured everything, you can run the services.
+Copy `.env.example` to `.env` and fill it in, then:
 
 ```bash
 make up
-```
-
-You can stop services just as easily.
-
-```bash
 make down
+docker logs <container>
 ```
 
-Use the Docker CLI to find containers, and access logs if containers don't work as expected.
+## License
 
-```
-docker ps
-docker logs ollama
-```
-
-## Specifications
-
-This is run on a system with the following specifications.
-
-- AMD AM5 Ryzen 7 7800X3D
-- 64GB DDR5 RAM
-- GeForce RTX 3090 Founders Edition
-- Arch Linux
-
-## Contributions
-
-Unlikely, but feel free to contribute issues if you have questions or want any support in spinning a similar configuration up yourself - I'll be happy to assist.
-
-## LICENSE
-
-MIT License
+[MIT](./LICENSE)
