@@ -56,7 +56,15 @@ sudo docker restart jellyfin
 journalctl -u homelab-compose
 ```
 
-Images are pinned by digest. `nix flake check` runs the tests; [migration/build-host.md](./migration/build-host.md) covers building and the VM smoke run.
+Images are pinned by digest.
+
+## Tests
+
+- `nix flake check` runs every check in `tests/`: the NixOS VM tests (they need KVM), the eval checks, the shell suites in `tests/shell-suites.nix` (Compose lint, the public-repo exposure scan, `.gitignore`, the README and restore guide), and the host build.
+- `bash tests/secrets-repo.sh` scans the whole git history for secrets. It needs the history, so it runs in CI rather than in the sandbox.
+- `bash tests/secrets-values.sh` (with `SOPS_AGE_KEY_FILE` set to the admin key) and `bash tests/secrets-age-keys.sh <vault> <token-file> <admin-key-file>` check the real secrets and the keys in 1Password, so they run by hand.
+- `scripts/vm-smoke.sh core|media|obs` boots the whole host as a VM and checks every container and route; see [migration/build-host.md](./migration/build-host.md) for running it before cutover.
+- CI (`.github/workflows/nix.yml`) runs the history scan, evaluates the flake, runs the checks that need no VM and builds the host.
 
 ## Secrets
 
@@ -81,7 +89,7 @@ Restoring files, Seafile and the databases is in [docs/restore.md](./docs/restor
 
 ## Egress
 
-The whole box, host and containers, goes out through Mullvad via a Tailscale exit node. The egress policy is a kill switch: if Tailscale or the exit node is down, traffic fails closed instead of leaking to the ISP. LAN and Docker traffic stay local.
+The whole box, host and containers, goes out through Mullvad via a Tailscale exit node. `mullvad-exit` checks every minute that the exit node is a Mullvad relay and pins one if it isn't, so a tailnet machine that advertises itself as an exit node can never carry the box's traffic. The egress policy is a kill switch: if Tailscale or the exit node is down, traffic fails closed instead of leaking to the ISP. LAN and Docker traffic stay local.
 
 There is one exception: the two Cloudflare tunnels (Authentik and `rida.sh`) connect straight to Cloudflare's tunnel edge, because Cloudflare refuses tunnel connections from Mullvad's relays. Only Cloudflare's published tunnel-edge prefixes skip Mullvad, and Cloudflare already knows the box from the tunnel tokens. See [0006](./docs/decisions/0006-whole-box-mullvad-egress.md).
 
@@ -92,6 +100,10 @@ Pi-hole, Ollama and Keeper.sh no longer run here. The rest of what was left behi
 ## Moving the box over
 
 [docs/cutover.md](./docs/cutover.md) is the runbook for installing this config on the box, and for rolling back.
+
+## Decisions
+
+Why things are the way they are: [docs/decisions](./docs/decisions/README.md).
 
 ## License
 
