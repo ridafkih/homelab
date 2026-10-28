@@ -31,8 +31,8 @@ disk2_uuid=$(sed -nE 's|.*"/mnt/disk2" = dataDisk "([0-9a-f-]+)".*|\1|p' modules
 key_file=$(sed -nE 's|.*keyFile = "([^"]+)".*|\1|p' modules/secrets.nix)
 edge_prefixes=$(awk '/cloudflareTunnelEdge = \{/,/^    \};/' modules/options.nix | grep -oE '"[0-9a-f.:]+/[0-9]+"' | tr -d '"')
 compose_projects=$(awk '/^  projects = \{/,/^  \};/' modules/docker-apps.nix | sed -nE 's/^    ([a-z0-9]+) = \{.*/\1/p')
-restic_jobs=$(awk '/services\.restic\.backups = \{/,/^  \};/' modules/backup.nix | sed -nE 's/^    ([a-z0-9]+) = job .*/\1/p')
-restic_timer_jobs=$(awk '/services\.restic\.backups = \{/,/^  \};/' modules/backup.nix | awk '/^    [a-z0-9]+ = job/ { job = $1 } /timerConfig = \{/ { print job }')
+restic_jobs=$(awk '/services\.restic\.backups = \{/,/^    \};/' modules/backup.nix | sed -nE 's/^      ([a-z0-9]+) = job .*/\1/p')
+restic_timer_jobs=$(awk '/services\.restic\.backups = \{/,/^    \};/' modules/backup.nix | awk '/^      [a-z0-9]+ = job/ { job = $1 } /timerConfig = \{/ { print job }')
 
 for value in nvme disk1_uuid disk2_uuid key_file edge_prefixes compose_projects restic_jobs restic_timer_jobs; do
   [ -n "${!value}" ] || fail "could not read $value from the Nix config; this test's parser needs updating"
