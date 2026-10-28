@@ -91,7 +91,7 @@ Run every heavy command under `nice -n19 ionice -c3`, including commands the dae
 QEMU started from `nixos-rebuild build-vm` or the VM smoke script runs as the login user, outside the daemon's cgroup, so `MemoryMax=24G` does not cover it. Start it under its own cap:
 
 ```sh
-systemd-run --user --scope -p MemoryMax=6G nice -n19 ionice -c3 ./result/bin/run-<name>-vm
+systemd-run --user --scope -p MemoryMax=7G nice -n19 ionice -c3 ./result/bin/run-<name>-vm
 ```
 
 Every test node sets `virtualisation.memorySize` explicitly (1024 to 2048 MiB unless the test needs more), so no VM inherits a default that does not fit.
