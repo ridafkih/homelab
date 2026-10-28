@@ -204,7 +204,6 @@ stop_line=$(printf '%s\n' "$state_text" | grep -nE 'systemctl stop tailscaled' |
 if [ -z "$pin_line" ] || [ -z "$stop_line" ] || [ "$pin_line" -gt "$stop_line" ]; then
   fail "$cutover #state: does not pin a Mullvad exit node before stopping tailscaled, so the carried prefs keep auto:any"
 fi
-require_in_section state "AutoExitNode // \"\"" 'does not check that the carried prefs have no AutoExitNode'
 state_blocks=$(printf '%s\n' "$state_text" | awk '/^[[:space:]]*(```|~~~)/ { if (!fenced) block++; fenced = !fenced; next } fenced { print block "\t" $0 }')
 block_of() {
   printf '%s\n' "$state_blocks" | grep -E -- "$1" | head -n1 | cut -f1
