@@ -41,6 +41,9 @@ jobs:
       - name: Evaluate flake
         run: nix flake check --no-build --no-update-lock-file -L
 
+      - name: Run the checks that need no VM
+        run: nix build --no-update-lock-file -L --no-link .#checks.x86_64-linux.shell-suites .#checks.x86_64-linux.mullvad-exit
+
       - name: Build toplevel
         run: |
           nix build --no-update-lock-file -L --no-link --print-out-paths .#nixosConfigurations.homelab.config.system.build.toplevel
