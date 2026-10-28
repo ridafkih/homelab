@@ -34,15 +34,6 @@ else
   fail "hosts/homelab/secrets.nix must set homelab.secrets.sopsFile to ../../secrets/homelab.yaml"
 fi
 
-[ -x migration/migrate-secrets.sh ] && pass || fail "migration/migrate-secrets.sh is missing or not executable"
-if [ -f migration/migrate-secrets.sh ]; then
-  bash -n migration/migrate-secrets.sh && pass || fail "migration/migrate-secrets.sh has a syntax error"
-  if grep -nE '^[[:space:]]*#' migration/migrate-secrets.sh | grep -v '^1:#!' > /dev/null; then
-    fail "migration/migrate-secrets.sh has comments"
-  else
-    pass
-  fi
-fi
 
 recipient_of() {
   grep -E "^[[:space:]]*- &$1 age1" .sops.yaml | sed -E 's/.*(age1[0-9a-z]+).*/\1/'

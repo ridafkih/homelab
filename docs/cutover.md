@@ -592,6 +592,19 @@ If Rida wants it: apply the diff, update the port list in `tests/dns-firewall.ni
    git commit -m "Retire the Arch to NixOS migration tooling"
    ```
 
-   Also drop `"migration"` from the allowed list in `tests/retire-arch.nix` and the migration line from the README's layout block in the same commit.
+   In the same commit, drop every reference to it outside `migration/`:
+
+   - `"migration"` from the allowed list in `tests/retire-arch.nix`;
+   - the `migration/` line from the layout block in `README.md`.
+
+   `tests/secrets-repo.sh` keeps its `':!migration'` exclusion, because the history still holds those files. Before pushing, check that nothing else still points into `migration/` and that the checks pass:
+
+   ```sh
+   git grep -nE '"migration"|(^|[^/[:alnum:]_.-])migration/' -- ':!docs/cutover.md' ':!docs/decisions'
+   nix flake check
+   SOPS_AGE_KEY_FILE=<admin-key-file> bash tests/secrets-values.sh
+   ```
+
+   Expected: the grep prints nothing and both checks pass. **STOP** and fix any reference the grep finds before pushing.
 
 The window is Rida's to pick, and the runbook waits until he does.
