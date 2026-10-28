@@ -253,6 +253,11 @@ done
 grep -qiE 'point of no return|first (nixos )?boot' <<<"$(section "$cutover" rollback)" || fail "$cutover #rollback: no separate notes for before and after the point of no return"
 require_in_section optional-firewall 'rida' 'optional firewall is not left as Rida'"'"'s choice'
 require_in_section optional-firewall '8006|3389' 'optional firewall does not name the ports it would close'
+cleanup_text=$(section "$cutover" cleanup)
+for file in $(git ls-files -- ':!migration' ':!docs/cutover.md' ':!docs/decisions' | xargs grep -lE '"migration"|(^|[^/[:alnum:]_.-])migration/' 2>/dev/null); do
+  grep -qF -- "\`$file\`" <<<"$cleanup_text" || fail "$cutover #cleanup: deleting migration/ leaves a reference in $file that cleanup does not name"
+done
+require_in_section cleanup 'nix flake check' 'cleanup does not run nix flake check before pushing the removal'
 require_in_section cleanup 'HF_TOKEN' 'cleanup does not delete the stale HF_TOKEN'
 require_in_section cleanup '\.before-' 'cleanup does not delete the *.before-* files'
 require_in_section cleanup 'hugging ?face' 'cleanup does not hand the Hugging Face revocation to Rida'

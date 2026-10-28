@@ -41,6 +41,17 @@ failures=0
 pass() { ran=$((ran + 1)); }
 fail() { ran=$((ran + 1)); failures=$((failures + 1)); echo "FAIL: $1"; }
 
+script="$repo/migration/migrate-secrets.sh"
+[ -x "$script" ] && pass || fail "migration/migrate-secrets.sh is missing or not executable"
+if [ -f "$script" ]; then
+  bash -n "$script" && pass || fail "migration/migrate-secrets.sh has a syntax error"
+  if grep -nE '^[[:space:]]*#' "$script" | grep -v '^1:#!' > /dev/null; then
+    fail "migration/migrate-secrets.sh has comments"
+  else
+    pass
+  fi
+fi
+
 table="$copy/secrets/keys.tsv"
 main_keys=$(cut -f3 "$table" | LC_ALL=C sort -u | grep -vE '^(openseo|restic)/' | cut -d/ -f2)
 openseo_keys=$(cut -f3 "$table" | LC_ALL=C sort -u | grep -E '^openseo/' | cut -d/ -f2)
