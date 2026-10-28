@@ -149,7 +149,7 @@ for boot in $boots; do
     verdict=$(awk -F '\t' '$1 == "verdict" { print $2 }' "$summary")
     guest_peak=$(awk -F '\t' '$1 == "guest_peak_mib" { print $2 }' "$summary")
     settle=$(awk -F '\t' '$1 == "settle_seconds" { print $2 }' "$summary")
-    awk -F '\t' '$1 == "container" || $1 == "route" || $1 == "unit" || $1 == "failure" || $1 == "expected_failure" || $1 == "kernel_oom"' "$summary"
+    awk -F '\t' '$1 == "container" || $1 == "route" || $1 == "unit" || $1 == "failure" || $1 == "expected_failure" || $1 == "kernel_oom" || $1 ~ /^db_dump/' "$summary"
   else
     echo "$boot: the guest wrote no summary; see $dir/serial.log" >&2
   fi

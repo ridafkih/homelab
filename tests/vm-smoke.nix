@@ -69,6 +69,16 @@ let
     vmWindowsOff = windowsOff vm;
     vmOpenseoOnlyInCore = openseoCondition vm == [ "homelab.smoke=core" ];
     vmComposeUnitsKept = hasUnit vm "homelab-compose" && hasUnit vm "openseo-compose";
+    vmCoreRunsRealDbDumps =
+      lib.hasInfix "dumpCommand = config.services.restic.backups.disk1.backupPrepareCommand;" vmSource
+      && builtins.all (needle: lib.hasInfix needle vmSource) [
+        "\${dumpCommand}"
+        "PostgreSQL database cluster dump complete"
+        "Dump completed"
+        "manifest.json"
+        "openseo_not_restarted"
+      ]
+      && vm.services.restic.backups.disk1.backupPrepareCommand == prod.services.restic.backups.disk1.backupPrepareCommand;
 
     prodEgressOn = prod.homelab.egress.enable == true;
     prodEgressPolicy = hasUnit prod "egress-policy";
