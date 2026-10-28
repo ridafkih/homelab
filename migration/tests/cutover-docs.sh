@@ -198,6 +198,13 @@ require_in_section state 'rsync' 'rsyncs the state'
 for item in '/var/lib/docker/volumes' 'metadata\.db' '\.data' '/var/lib/tailscale' 'ssh_host_' 'machine-id' '/mnt/disk2/migration'; do
   require_in_section state "$item" "does not carry $item"
 done
+state_text=$(section "$cutover" state)
+pin_line=$(printf '%s\n' "$state_text" | grep -nE 'tailscale set --exit-node="?\$' | head -n1 | cut -d: -f1)
+stop_line=$(printf '%s\n' "$state_text" | grep -nE 'systemctl stop tailscaled' | head -n1 | cut -d: -f1)
+if [ -z "$pin_line" ] || [ -z "$stop_line" ] || [ "$pin_line" -gt "$stop_line" ]; then
+  fail "$cutover #state: does not pin a Mullvad exit node before stopping tailscaled, so the carried prefs keep auto:any"
+fi
+require_in_section state "AutoExitNode // \"\"" 'does not check that the carried prefs have no AutoExitNode'
 require_in_section state 'storage.?driver|docker info' 'checks the Docker storage driver before copying volumes'
 require_in_section install 'virtual media' 'boots the ISO over the KVM virtual media'
 require_in_section install 'readlink -f' 'gates on readlink -f of the by-id path'

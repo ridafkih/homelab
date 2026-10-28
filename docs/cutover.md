@@ -187,13 +187,17 @@ Downtime starts here. Arch's `~/homelab` is left exactly as it is, so a rollback
 
    ```sh
    M=/mnt/disk2/migration
+   mullvad=$(tailscale status --json | jq -r '[.Peer[] | select((.Tags // []) | index("tag:mullvad-exit-node")) | select(.ExitNodeOption and .Online)] | sort_by(-(.Location.Priority // 0)) | .[0].TailscaleIPs[0] // ""')
+   echo "$mullvad"
+   sudo tailscale set --exit-node="$mullvad"
+   tailscale debug prefs | jq -r '.AutoExitNode // ""'
    sudo systemctl stop tailscaled
    sudo rsync -aHAX --numeric-ids /var/lib/tailscale/ $M/state/tailscale/
    sudo rsync -aHAXn --checksum --itemize-changes /var/lib/docker/volumes/ $M/state/docker-volumes/
    sudo poweroff
    ```
 
-   Expected: the checksum dry run prints nothing, which means the volume copy matches the source byte for byte. Restoring the Tailscale state keeps the same node, so NixOS needs no auth key.
+   Expected: a Mullvad relay's tailnet address, then an empty line for `AutoExitNode`, then the checksum dry run prints nothing, which means the volume copy matches the source byte for byte. Pinning a Mullvad relay first replaces Arch's `auto:any` in the saved prefs, so NixOS never boots with automatic selection, which can pick an ordinary tailnet exit node before `mullvad-exit` first runs. **STOP** if the address is empty (no Mullvad relay online) or `AutoExitNode` isn't empty. Restoring the Tailscale state keeps the same node, so NixOS needs no auth key.
 
 ## Install
 
