@@ -54,6 +54,7 @@ flock -n 9 || refuse "another vm-smoke run holds $build_root/.vm-smoke.lock"
 
 cleanup() {
   for boot in $boots; do
+    systemctl --user stop "vm-smoke-$boot-$$.scope" 2> /dev/null || true
     rm -f "$state/$boot"/*.qcow2
     rm -rf "$state/$boot/tmp"
   done
