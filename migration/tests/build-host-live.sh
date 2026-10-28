@@ -93,7 +93,7 @@ trusted-users = root
 CONF
 awk '{ key=$1; $1=$2=""; n=split(substr($0,3), w, " "); if (key == "experimental-features") { m=0; for (i=1;i<=n;i++) if (w[i] != "fetch-tree") w[++m]=w[i]; n=m } for (i=1;i<=n;i++) for (j=i+1;j<=n;j++) if (w[j] < w[i]) { t=w[i]; w[i]=w[j]; w[j]=t } line=key " ="; for (i=1;i<=n;i++) line=line " " w[i]; print line }' "$work/conf" > "$work/conf-sorted"
 diff "$work/conf-expected" "$work/conf-sorted" >/dev/null || {
-  fail 'nix.conf settings differ from 0002'
+  fail 'nix.conf settings differ from migration/build-host.md'
   diff "$work/conf-expected" "$work/conf-sorted"
 }
 

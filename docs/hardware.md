@@ -8,7 +8,7 @@ What the box is, where its data lives, and what was deliberately left behind whe
 | --- | --- |
 | CPU | AMD Ryzen 7 7800X3D, 16 threads, with an iGPU that drives the console |
 | Memory | 64 GB (61 GiB usable), no swap |
-| GPU | NVIDIA RTX 4080 SUPER, used headless for Jellyfin's NVENC transcodes through CDI ([0011](decisions/0011-nvidia-driver-and-cdi.md)) |
+| GPU | NVIDIA RTX 4080 SUPER, used headless for Jellyfin's NVENC transcodes through CDI ([0009](decisions/0009-nvidia.md)) |
 | System disk | WD_BLACK SN850X 2 TB NVMe, `/dev/disk/by-id/nvme-WD_BLACK_SN850X_2000GB_23523B800268` |
 | Firmware | UEFI; NixOS boots with systemd-boot from a 1 GB ESP |
 | Network | `eno1` on the LAN at 10.0.0.98 (DHCP, pinned client ID); the Wi-Fi card `wlp9s0` is left unmanaged |
@@ -46,7 +46,7 @@ The hub and its three `uas` devices hang off the 10000M root hub, and the count 
 
 Only the NVMe is in disko (`hosts/homelab/disks.nix`), and an eval assertion refuses any other target. Nothing in this repo ever formats or partitions the data disks.
 
-Both data disks mount by UUID with `nofail`, `noatime` and a 15 second device timeout, and `/data` is a mergerfs pool over them (`category.create=mfs`, so new files land on whichever disk has more free space). Docker is bound to all three mounts and won't start without them ([0010](decisions/0010-storage-and-disko.md)).
+Both data disks mount by UUID with `nofail`, `noatime` and a 15 second device timeout, and `/data` is a mergerfs pool over them (`category.create=mfs`, so new files land on whichever disk has more free space). Docker is bound to all three mounts and won't start without them ([0008](decisions/0008-storage.md)).
 
 What lives where on the pool:
 
@@ -55,7 +55,7 @@ What lives where on the pool:
 - `/data/windows` is the Windows VM's disk (sparse, 64 GB apparent). It is excluded from backups, as it was on Arch.
 - `timemachine.img` on disk2 (about 600 GB) is the old Time Machine image. It is left where it is, not mounted and not served.
 
-Backups are on-disk only and cross the disks ([0012](decisions/0012-selective-on-disk-backups.md), `modules/backup.nix`): the `disk1` job writes the system set plus disk1's Seafile half to `/mnt/disk2/backup/restic`, and the `disk2` job writes the system set plus disk2's Seafile half to `/mnt/disk1/backup/restic`. Losing one disk loses one Seafile half and one repo, and the other repo still holds that half.
+Backups are on-disk only and cross the disks ([0010](decisions/0010-backups.md), `modules/backup.nix`): the `disk1` job writes the system set plus disk1's Seafile half to `/mnt/disk2/backup/restic`, and the `disk2` job writes the system set plus disk2's Seafile half to `/mnt/disk1/backup/restic`. Losing one disk loses one Seafile half and one repo, and the other repo still holds that half.
 
 ## Not carried over
 
@@ -71,7 +71,7 @@ These were on the Arch box and are intentionally not part of the NixOS config.
 | `jellyfin-ensure.service` and Docker's `daemon.json` | Docker restart policies and the Nix Docker settings replace them. |
 | `nvidia-docker-arch.service` and the Docker drop-ins for `nvidia-uvm` | The CDI generator ordering in `modules/nvidia.nix` covers them. |
 | The pacman hook that rebuilt the container CA bundle | `modules/trust.nix` builds the bundle instead. |
-| The macvlan `local-network` the two cloudflared containers used to dodge the exit node | The egress policy's Cloudflare edge rule replaces it ([0008](decisions/0008-whole-box-mullvad-egress.md)). |
+| The macvlan `local-network` the two cloudflared containers used to dodge the exit node | The egress policy's Cloudflare edge rule replaces it ([0006](decisions/0006-whole-box-mullvad-egress.md)). |
 | The `.data` dirs `llama-cpp`, `vllm`, `pihole`, `pihole-tailscale` and `mitmproxy` (about 90 GB) | Leftovers from services that no longer run. |
 | Pi-hole, Ollama and Keeper.sh | No longer run on this box. |
 | The kernel parameters `nomodeset` and `module_blacklist=nvidia_drm` | They were a guess during the USB hangs above. |

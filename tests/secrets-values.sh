@@ -77,7 +77,7 @@ extra_empty=$(LC_ALL=C comm -13 <(echo "$expected_empty") <(echo "$actual_empty"
 [ -z "$extra_empty" ] && pass || fail "empty values not allowed by secrets/keys.tsv: $(echo "$extra_empty" | tr "\n" " ")"
 
 bad_shape=$(decrypted | jq -r '([39] | implode) as $quote | [paths(scalars) as $p | getpath($p) as $v | select(($v | type) != "string" or ($v | contains($quote)) or ($v | contains("\n"))) | $p | map(tostring) | join("/")] | .[]')
-[ -z "$bad_shape" ] && pass || fail "values that are not strings or hold a single quote or newline (0004): $(echo "$bad_shape" | tr "\n" " ")"
+[ -z "$bad_shape" ] && pass || fail "values that are not strings or hold a single quote or newline (0002): $(echo "$bad_shape" | tr "\n" " ")"
 
 leak_patterns() {
   decrypted | jq -r --arg skip "$non_credential_names" '

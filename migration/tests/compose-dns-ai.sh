@@ -85,8 +85,8 @@ check "open-webui volumes" "$(svc open-webui '[.volumes[]? | "\(.source):\(.targ
   "[\"$data/open-webui/app/backend/data:/app/backend/data\"]"
 
 check "adguard-init env_file" "$(jq -c '.services["adguard-init"].env_file // [] | [.[] | if type == "object" then .path else . end]' "$scratch/adguard.raw.json")" '["${HOMELAB_SECRETS_DIR:?}/adguard.env"]'
-holds "adguard-init has no environment: entries (0004)" "! grep -Eq '^ *environment:' '$adguard'"
-holds "no env_file uses format: raw (0004)" "! grep -Eq 'format: *raw' '$adguard' '$webui'"
+holds "adguard-init has no environment: entries (0002)" "! grep -Eq '^ *environment:' '$adguard'"
+holds "no env_file uses format: raw (0002)" "! grep -Eq 'format: *raw' '$adguard' '$webui'"
 check "adguard-init rendered ADGUARD_USER" "$(unescaped adguard-init '.environment.ADGUARD_USER')" "$dummy_user"
 check "adguard-init rendered ADGUARD_PASSWORD_HASH byte for byte" "$(unescaped adguard-init '.environment.ADGUARD_PASSWORD_HASH')" "$dummy_hash"
 check "open-webui has no environment" "$(jq -c '.services["open-webui"].environment // null' "$scratch/webui.raw.json")" 'null'
