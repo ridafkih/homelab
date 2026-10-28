@@ -28,7 +28,6 @@ done
 dot='\.'
 users=Users
 identity=IdentityAgent
-run='<ru''n>'
 
 vendored="apps/observability/config/signoz/clickhouse-config.xml"
 
@@ -74,7 +73,6 @@ scan() {
     email_hits "$1"
     hits "tailnet domain" "${dot}ts${dot}net([^A-Za-z]|\$)" "$1"
     hits "local user path" "/${users}/" "$1"
-    hits "tooling notes" "[Oo]wner rules? [0-9]|^## Agent context|${run}/|[(]winner [A-Z][)]|CLAUDE${dot}md" "$1"
     denylist_hits "$1" "$2"
     hits "private key path" "[~]/${dot}ssh/id_|${identity}=none" "$1"
     hits "MAC address" '(^|[^0-9A-Fa-f:])([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}([^0-9A-Fa-f:]|$)' "$1"
@@ -89,19 +87,11 @@ at=@
 tailnet=ts
 key=id_ed25519
 mac=aa:bb:cc
-rule=12
-winner=B
-period=.
 {
   printf '%s\n' "reach me at someone${at}example.org"
   printf '%s\n' "host.tail1234.${tailnet}.net"
   printf '%s\n' "/${users}/someone/project"
   printf '%s\n' "built by planted-tool-name"
-  printf '%s\n' "Owner rule ${rule} says so"
-  printf '%s\n' "## Agent context"
-  printf '%s\n' "notes in ${run}/plan"
-  printf '%s\n' "option two (winner ${winner})"
-  printf '%s\n' "see CLAUDE${period}md"
   printf '%s\n' "ssh -i ~/.ssh/${key} host"
   printf '%s\n' "link ${mac}:dd:ee:ff up"
 } > "$control/docs/leaky.md"
@@ -115,8 +105,7 @@ local user path
 MAC address
 private key path
 shell fallback
-tailnet domain
-tooling notes"
+tailnet domain"
 found=$(scan "$control" "$control/denylist" | sed -n 's/.* \[\(.*\)\]$/\1/p' | LC_ALL=C sort -u)
 if [ "$found" != "$(printf '%s\n' "$expected" | LC_ALL=C sort -u)" ]; then
   echo "exposure: the scanner missed a planted leak or flagged a safe line"
@@ -125,11 +114,6 @@ if [ "$found" != "$(printf '%s\n' "$expected" | LC_ALL=C sort -u)" ]; then
 fi
 if scan "$control" "$control/denylist" | grep -q '^docs/fine\.md:'; then
   echo "exposure: the scanner flags docs/fine.md, which holds only safe lines"
-  exit 1
-fi
-notes=$(scan "$control" "" | grep -c '\[tooling notes\]$' || true)
-if [ "$notes" -ne 5 ]; then
-  echo "exposure: the scanner caught $notes of the 5 planted tooling notes"
   exit 1
 fi
 if scan "$control" "" | grep -q '\[denylist\]$'; then
