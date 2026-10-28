@@ -183,21 +183,31 @@ Downtime starts here. Arch's `~/homelab` is left exactly as it is, so a rollback
 
    This carries every Docker volume together with `metadata.db` (Docker's record of them), `.data` minus the dropped dirs listed in [hardware.md](hardware.md), Authentik's data moved from `.authentik` to `.data/authentik` where the new compose files look for it, the host age key, the ssh host keys, and `/etc/machine-id` (the DHCP client ID is derived from it, which keeps 10.0.0.98). Expected: `no clash` and `volume metadata copied`. **STOP** on either missing.
 
-4. **Copy Tailscale's state last, from the KVM console.** Stopping tailscaled drops any ssh session that came in over the tailnet.
+4. **Pin a Mullvad relay, from the KVM console.** Pinning one replaces Arch's `auto:any` in the saved prefs, so NixOS never boots with automatic selection, which can pick an ordinary tailnet exit node before `mullvad-exit` first runs.
+
+   ```sh
+   (
+     mullvad=$(tailscale status --json | jq -r '[.Peer[] | select((.Tags // []) | index("tag:mullvad-exit-node")) | select(.ExitNodeOption and .Online)] | sort_by(-(.Location.Priority // 0)) | .[0].TailscaleIPs[0] // ""')
+     [ -n "$mullvad" ] || { echo "STOP: no Mullvad relay online"; exit 1; }
+     sudo tailscale set --exit-node="$mullvad"
+     [ -z "$(tailscale debug prefs | jq -r '.AutoExitNode // ""')" ] || { echo "STOP: AutoExitNode is still set"; exit 1; }
+     echo "pinned $mullvad"
+   )
+   ```
+
+   Expected: `pinned` and a Mullvad relay's tailnet address. **STOP** on either STOP line: nothing has been stopped yet, so Arch is still running as before. The block runs in a subshell, so a STOP's `exit` leaves the console open.
+
+5. **Copy Tailscale's state last and power off.** Only after step 4 printed `pinned`. Stopping tailscaled drops any ssh session that came in over the tailnet.
 
    ```sh
    M=/mnt/disk2/migration
-   mullvad=$(tailscale status --json | jq -r '[.Peer[] | select((.Tags // []) | index("tag:mullvad-exit-node")) | select(.ExitNodeOption and .Online)] | sort_by(-(.Location.Priority // 0)) | .[0].TailscaleIPs[0] // ""')
-   echo "$mullvad"
-   sudo tailscale set --exit-node="$mullvad"
-   tailscale debug prefs | jq -r '.AutoExitNode // ""'
    sudo systemctl stop tailscaled
    sudo rsync -aHAX --numeric-ids /var/lib/tailscale/ $M/state/tailscale/
    sudo rsync -aHAXn --checksum --itemize-changes /var/lib/docker/volumes/ $M/state/docker-volumes/
    sudo poweroff
    ```
 
-   Expected: a Mullvad relay's tailnet address, then an empty line for `AutoExitNode`, then the checksum dry run prints nothing, which means the volume copy matches the source byte for byte. Pinning a Mullvad relay first replaces Arch's `auto:any` in the saved prefs, so NixOS never boots with automatic selection, which can pick an ordinary tailnet exit node before `mullvad-exit` first runs. **STOP** if the address is empty (no Mullvad relay online) or `AutoExitNode` isn't empty. Restoring the Tailscale state keeps the same node, so NixOS needs no auth key.
+   Expected: the checksum dry run prints nothing, which means the volume copy matches the source byte for byte. Restoring the Tailscale state keeps the same node, so NixOS needs no auth key.
 
 ## Install
 
