@@ -77,6 +77,8 @@ let
     lib.mapAttrsToList (name: project: map (template: { inherit template; unit = unitOf name; }) project.templates) projects
   );
 
+  ownedDataDirs = [ config.homelab.dataDir ] ++ map (path: "${config.homelab.dataDir}/${path}") [ "jellyfin" "jellyfin/config" "jellyfin/cache" "jellyseerr" "jellyseerr/config" ];
+
   autoAllocatedPools = [
     { base = "172.17.0.0/16"; size = 16; }
     { base = "172.18.0.0/16"; size = 16; }
@@ -124,6 +126,14 @@ in
         };
       }
     ];
+
+    systemd.tmpfiles.settings."10-homelab-compose" = lib.genAttrs ownedDataDirs (_: {
+      d = {
+        user = config.homelab.user;
+        group = config.homelab.user;
+        mode = "0755";
+      };
+    });
 
     sops.templates = lib.mkMerge (
       map (consumer: { ${consumer.template}.reloadUnits = [ consumer.unit ]; }) templateConsumers
