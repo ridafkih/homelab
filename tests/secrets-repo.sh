@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
-for tool in git gitleaks sops age-keygen jq; do
+for tool in git gitleaks trufflehog sops age-keygen jq; do
   command -v "$tool" > /dev/null || { echo "missing tool: $tool"; exit 1; }
 done
 
@@ -58,6 +58,65 @@ if test -f secrets/homelab.yaml; then
     fail "the test key decrypts secrets/homelab.yaml"
   fi
 fi
+
+tracked=$(git ls-files)
+grep -Eq '(^|/)\.env(\..*)?$|(^|/)\.envrc$|\.before-|\.bak$|\.qcow2$|(^|/)result(-[^/]*)?$' <<< "$tracked" \
+  && fail "env files, hand backups, disk images or build outputs are tracked"
+grep -q 'machine-id$' <<< "$tracked" && fail "a machine-id is tracked"
+
+age_identity='AGE-SECRET-KEY-1[A-Z0-9]{50,}'
+identity_paths=$(git log --format= --name-only -E -G"$age_identity" HEAD | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//')
+[ "$identity_paths" = "secrets/test-age.key" ] || fail "age identities in history must live only in secrets/test-age.key, found in: [$identity_paths]"
+distinct_identities=$(git log -p --format= HEAD | grep -oE "$age_identity" | sort -u | wc -l | tr -d ' ')
+[ "$distinct_identities" = 1 ] || fail "history holds $distinct_identities distinct age identities, expected only the test key"
+
+test_recipient=$(sed -nE 's/^  - &test (age1[0-9a-z]+)$/\1/p' .sops.yaml)
+[ "$(age-keygen -y secrets/test-age.key 2>/dev/null)" = "$test_recipient" ] || fail "secrets/test-age.key is not the &test recipient in .sops.yaml"
+recipients_of() {
+  sed -nE 's/^ +recipient: (age1[0-9a-z]+)$/\1/p' "$1" | sort | tr '\n' ' ' | sed 's/ $//'
+}
+expected_recipients=$(sed -nE 's/^  - &(host|admin) (age1[0-9a-z]+)$/\2/p' .sops.yaml | sort | tr '\n' ' ' | sed 's/ $//')
+[ "$(recipients_of secrets/homelab.yaml)" = "$expected_recipients" ] || fail "secrets/homelab.yaml is not encrypted to exactly the host and admin keys"
+[ "$(recipients_of secrets/vm.yaml)" = "$test_recipient" ] || fail "secrets/vm.yaml is not encrypted to the test key alone"
+
+leaf_kinds() {
+  awk '
+    /^sops:/ { exit }
+    /^[[:space:]]*(#|$)/ { next }
+    {
+      match($0, /^ */); depth = RLENGTH / 4
+      line = substr($0, RLENGTH + 1)
+      key = line; sub(/:.*/, "", key)
+      value = line; sub(/^[^:]*:[[:space:]]*/, "", value)
+      path[depth] = key
+      if (value == "") next
+      full = path[0]; for (i = 1; i <= depth; i++) full = full "/" path[i]
+      if (value ~ /^ENC\[AES256_GCM,data:.*,type:[a-z]+\]$/) kind = "enc"
+      else if (value == "\"\"") kind = "empty"
+      else kind = "plain"
+      print full "\t" kind
+    }
+  ' "$1"
+}
+empty_allowed=$(awk -F '\t' '$4 == "allow" { print $3 }' secrets/keys.tsv | sort -u)
+for file in secrets/homelab.yaml secrets/vm.yaml; do
+  leaves=$(leaf_kinds "$file")
+  [ -n "$leaves" ] || fail "$file has no values"
+  plain=$(awk -F '\t' '$2 == "plain" { print $1 }' <<< "$leaves" | tr '\n' ' ')
+  [ -z "$plain" ] || fail "$file has plaintext values: $plain"
+  bad_empty=$(awk -F '\t' '$2 == "empty" { print $1 }' <<< "$leaves" | grep -vxF -f <(printf '%s\n' "$empty_allowed") | tr '\n' ' ' || true)
+  [ -z "$bad_empty" ] || fail "$file leaves keys empty that keys.tsv does not allow: $bad_empty"
+done
+
+history_lines() {
+  git log -p --format= HEAD -- . ':!tests' ':!migration' ':!scripts/tests' ':!docs/decisions'
+}
+history_lines | grep -qE '^\+.*-----BEGIN [A-Z ]*PRIVATE KEY-----' && fail "a PEM private key is in history"
+history_lines | grep -qE '^\+.*hf_[A-Za-z0-9]{30,}' && fail "a Hugging Face token is in history"
+
+trufflehog git "file://$PWD" --no-update --json --results=verified,unverified,unknown > "$scratch/trufflehog.json" 2> /dev/null
+found=$(jq -c 'select(.SourceMetadata != null) | {d: .DetectorName, f: .SourceMetadata.Data.Git.file, c: .SourceMetadata.Data.Git.commit[0:8]}' "$scratch/trufflehog.json")
+[ -z "$found" ] || fail "trufflehog found secrets in history: $found"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures secrets repo checks failed"
