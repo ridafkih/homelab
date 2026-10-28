@@ -29,9 +29,9 @@ for doc in "$readme" "$restore"; do
 done
 finish
 
-dump_dir=$(sed -nE 's|^  dumpDir = "([^"]+)";|\1|p' modules/backup.nix)
-restic_jobs=$(awk '/services\.restic\.backups = \{/,/^  \};/' modules/backup.nix | sed -nE 's/^    ([a-z0-9]+) = job .*/\1/p')
-job_pairs=$(awk '/services\.restic\.backups = \{/,/^  \};/' modules/backup.nix | sed -nE 's/^    ([a-z0-9]+) = job "([^"]+)" "([^"]+)".*/\1 \2 \3/p')
+dump_dir=$(sed -nE '/homelab\.backup\.dumpDir = lib\.mkOption/,/\};/ s|^ *default = "([^"]+)";|\1|p' modules/backup.nix)
+restic_jobs=$(awk '/services\.restic\.backups = \{/,/^    \};/' modules/backup.nix | sed -nE 's/^      ([a-z0-9]+) = job .*/\1/p')
+job_pairs=$(awk '/services\.restic\.backups = \{/,/^    \};/' modules/backup.nix | sed -nE 's/^      ([a-z0-9]+) = job "([^"]+)" "([^"]+)".*/\1 \2 \3/p')
 compose_projects=$(awk '/^  projects = \{/,/^  \};/' modules/docker-apps.nix | sed -nE 's/^    ([a-z0-9]+) = \{.*/\1/p')
 key_file=$(sed -nE 's|.*keyFile = "([^"]+)".*|\1|p' modules/secrets.nix)
 containers=$(sed -nE 's/^ +container_name: *"?([A-Za-z0-9_.-]+)"?.*/\1/p' apps/*/compose.yaml | sort -u)
