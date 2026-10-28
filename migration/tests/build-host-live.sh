@@ -104,7 +104,7 @@ else
 fi
 
 [ "$(box 'git -C ~/homelab-nixos-build/repo.git rev-parse --is-bare-repository' "$@" 2>&1)" = true ] \
-  || fail '~/homelab-nixos-build/repo.git is not a bare repository'
+  || fail 'homelab-nixos-build/repo.git in the login home is not a bare repository'
 
 box "docker ps --format '{{.Names}} {{.Status}}'" "$@" > "$work/post-docker-ps"
 names_from_ps "$evidence/pre-docker-ps.txt" > "$work/pre-names"
