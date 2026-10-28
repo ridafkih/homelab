@@ -18,6 +18,7 @@ if [ "$#" -ge 1 ] && [ "$1" = --down ]; then
   shift 2
 fi
 [ "$#" -eq 1 ] || usage
+tier=$1
 case "$1" in
   core) boots=core ;;
   media) boots=media ;;
@@ -167,13 +168,24 @@ for boot in $boots; do
 done
 
 snapshot "$state/after"
-compare "$state/before" "$state/after" || overall=1
+if compare "$state/before" "$state/after"; then
+  echo "== live box: containers and listening sockets unchanged"
+else
+  overall=1
+fi
 
 leftover=$(find "$build_root" -name '*.qcow2' -print)
 if [ -n "$leftover" ]; then
   echo "qcow2 images left under $build_root:" >&2
   echo "$leftover" >&2
   overall=1
+else
+  echo "== no qcow2 left under $build_root"
 fi
 
+if [ "$overall" -eq 0 ]; then
+  echo "== vm-smoke $tier: pass"
+else
+  echo "== vm-smoke $tier: fail"
+fi
 exit "$overall"
