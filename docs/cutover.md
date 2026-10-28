@@ -561,11 +561,12 @@ If Rida wants it: apply the diff, update the port list in `tests/dns-firewall.ni
 
    ```sh
    sudo find /home/rida/homelab \( -name '*.before-*' -o -name '*.bak' -o -name '.env' \) -print
-   sudo grep -rl HF_TOKEN /home/rida/homelab /run/secrets/rendered
+   git -C /home/rida/homelab ls-files -z --others -- ':!:.data' | (cd /home/rida/homelab && xargs -0r grep -l HF_TOKEN --)
+   sudo grep -rl HF_TOKEN /run/secrets/rendered
    sudo find /home/rida/homelab \( -name '*.before-*' -o -name '*.bak' \) -delete
    ```
 
-   Expected: the first two print nothing. Copies remain in two places: the NVMe rollback image (deleted in step 3) and Arch-era restic snapshots of `/home/rida`, which age out under the 7 daily, 4 weekly and 6 monthly retention. If the Arch box ever comes back by rollback, also run `sed -i '/^HF_TOKEN=/d' /home/rida/homelab/.env` and delete the `*.before-*` and `*.bak` files there.
+   Expected: the first three print nothing. The second searches only files git doesn't track (ignored ones included, `.data/` left out since it holds app state, not env files): the clone's tracked docs, modules and tests mention `HF_TOKEN` by name, so a plain `grep -r` over the checkout always matches and proves nothing. Copies remain in two places: the NVMe rollback image (deleted in step 3) and Arch-era restic snapshots of `/home/rida`, which age out under the 7 daily, 4 weekly and 6 monthly retention. If the Arch box ever comes back by rollback, also run `sed -i '/^HF_TOKEN=/d' /home/rida/homelab/.env` and delete the `*.before-*` and `*.bak` files there.
 
 2. **Revoke the token at Hugging Face.** It was never in the repo, but it is still live. Revoking it under Settings, Access Tokens needs Rida's sign-in, so it's his to do.
 
