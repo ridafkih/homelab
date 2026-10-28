@@ -89,7 +89,7 @@ Restoring files, Seafile and the databases is in [docs/restore.md](./docs/restor
 
 ## Egress
 
-The whole box, host and containers, goes out through Mullvad via a Tailscale exit node. `mullvad-exit` checks every minute that the exit node is a Mullvad relay and pins one if it isn't, so a tailnet machine that advertises itself as an exit node can never carry the box's traffic. The egress policy is a kill switch: if Tailscale or the exit node is down, traffic fails closed instead of leaking to the ISP. LAN and Docker traffic stay local.
+The whole box, host and containers, goes out through Mullvad via a Tailscale exit node. `mullvad-exit` checks every minute that the exit node is a Mullvad relay and pins one if it isn't (or clears the exit node when no Mullvad relay is online), so a tailnet machine that advertises itself as an exit node can never carry the box's traffic. The egress policy is a kill switch: if Tailscale or the exit node is down, traffic fails closed instead of leaking to the ISP. LAN and Docker traffic stay local.
 
 There is one exception: the two Cloudflare tunnels (Authentik and `rida.sh`) connect straight to Cloudflare's tunnel edge, because Cloudflare refuses tunnel connections from Mullvad's relays. Only Cloudflare's published tunnel-edge prefixes skip Mullvad, and Cloudflare already knows the box from the tunnel tokens. See [0006](./docs/decisions/0006-whole-box-mullvad-egress.md).
 

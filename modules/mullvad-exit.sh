@@ -38,7 +38,12 @@ else
 fi
 
 if [ -z "$choice" ]; then
-  echo "mullvad-exit: no online Mullvad exit node; current exit node $current_label is left alone and the egress floor stays the backstop" >&2
+  if [ -n "$current" ] || [ -n "$auto" ]; then
+    echo "mullvad-exit: no online Mullvad exit node; clearing exit node $current_label (auto $auto_label) so the egress floor keeps traffic in" >&2
+    tailscale set --exit-node=
+  else
+    echo "mullvad-exit: no online Mullvad exit node; with no exit node the egress floor keeps traffic in" >&2
+  fi
   exit 1
 fi
 
