@@ -106,8 +106,9 @@ let
     builtins.filter (arg: lib.hasPrefix "--exclude-file=" arg) (lib.splitString " " (joinedArgs name));
   excludeFileReadable = name:
     let args = excludeFileArgs name; in
-    let file = lib.removePrefix "--exclude-file=" (builtins.head args); in
-    builtins.length args == 1 && builtins.pathExists file && builtins.readFile file == expectedExcludes;
+    builtins.length args == 1
+    && builtins.unsafeDiscardStringContext (builtins.head args) == "--exclude-file=${builtins.unsafeDiscardStringContext "${../modules/backup-excludes.txt}"}"
+    && builtins.readFile ../modules/backup-excludes.txt == expectedExcludes;
 
   unitSettled = name:
     includesAll [ "/mnt/disk1" "/mnt/disk2" ] (listOf ((service name).unitConfig.RequiresMountsFor or [ ]))
