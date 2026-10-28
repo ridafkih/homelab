@@ -7,6 +7,7 @@ let
     "readme-restore.sh"
   ];
   outsideTheSandbox = [
+    "ci-workflow.sh"
     "secrets-age-keys.sh"
     "secrets-repo.sh"
     "secrets-values.sh"

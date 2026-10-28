@@ -75,6 +75,10 @@ expect_match "flakes enabled" 'experimental-features[[:space:]]*=[[:space:]]*nix
 expect_match "flake config not accepted" 'accept-flake-config[[:space:]]*=[[:space:]]*false'
 
 expect_match "flake check without build" 'nix flake check.*--no-build'
+expect_match "checkout fetches the whole history" 'fetch-depth:[[:space:]]*0'
+expect_match "scans the history for secrets" 'bash tests/secrets-repo\.sh'
+expect_match "builds every check that needs no VM" 'nix build.*\.#checks-novm'
+expect_absent "no hand-picked check list" 'nix build.*\.#checks\.x86_64-linux\.'
 expect_match "builds the homelab toplevel" "nix build.*nixosConfigurations\\.homelab\\.config\\.system\\.build\\.toplevel"
 expect_match "logs closure size" 'nix path-info.*-S'
 
