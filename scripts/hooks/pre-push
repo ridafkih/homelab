@@ -1,0 +1,42 @@
+#!/bin/sh
+set -eu
+
+scanner=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd -P)/tests/exposure.sh
+[ -f "$scanner" ] || { echo "pre-push: $scanner is missing" >&2; exit 1; }
+
+denylist=$(git config --type=path --get homelab.exposureDenylist) || {
+  echo "pre-push: set homelab.exposureDenylist to the denylist file kept outside the repo" >&2
+  exit 1
+}
+[ -s "$denylist" ] || { echo "pre-push: the denylist $denylist is missing or empty" >&2; exit 1; }
+
+work=$(mktemp -d -t pre-push.XXXXXX)
+trap 'rm -rf "$work"' EXIT INT TERM
+grep -vE '^[[:space:]]*($|[#])' "$denylist" > "$work/patterns" || true
+[ -s "$work/patterns" ] || { echo "pre-push: the denylist $denylist holds no patterns" >&2; exit 1; }
+
+zero=0000000000000000000000000000000000000000
+failed=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" != "$zero" ] || continue
+  rm -rf "$work/tree"
+  mkdir "$work/tree"
+  git archive "$local_sha" | tar -x -C "$work/tree"
+  sh "$scanner" --denylist "$denylist" "$work/tree" > "$work/scan" || {
+    echo "pre-push: $local_ref would publish:" >&2
+    cat "$work/scan" >&2
+    failed=1
+  }
+  if [ "$remote_sha" = "$zero" ]; then
+    git log -p --unified=0 --format='%H%n%B' "$local_sha" --not --remotes > "$work/history"
+  else
+    git log -p --unified=0 --format='%H%n%B' "$remote_sha..$local_sha" > "$work/history"
+  fi
+  if grep -vE '^-' "$work/history" | grep -nE -f "$work/patterns" > "$work/hits"; then
+    echo "pre-push: commits going to $remote_ref add lines on the denylist:" >&2
+    cat "$work/hits" >&2
+    failed=1
+  fi
+done
+
+exit "$failed"
