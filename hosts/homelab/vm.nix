@@ -247,19 +247,22 @@ in
           done
 
           declare -a expected=()
+          declare -A tokens=()
+
+          addTokens() {
+            local project=$1 config=$2 token service
+            while read -r token service; do
+              tokens[$token]="$project/$service"
+            done < <(jq -r '.services | to_entries[] | .key as $name
+              | ([$name, .value.container_name] + [(.value.networks // {}) | to_entries[] | (.value // {}).aliases // [] | .[]])
+              | map(select(. != null)) | unique[] | "\(.) \($name)"' "$config")
+          }
+
           if [ -s ${stateDir}/homelab.json ]; then
             while read -r service; do
               expected+=("homelab/$service")
             done < <(jq -r --arg tier "$tier" '.tiers[$tier][] as $name | select(.expectedFailures | index($name) | not) | $name' ${tiersJson})
-          fi
-
-          declare -A tokens=()
-          if [ -s ${stateDir}/homelab.json ]; then
-            while read -r token service; do
-              tokens[$token]="homelab/$service"
-            done < <(jq -r '.services | to_entries[] | .key as $name
-              | ([$name, .value.container_name] + [(.value.networks // {}) | to_entries[] | (.value // {}).aliases // [] | .[]])
-              | map(select(. != null)) | unique[] | "\(.) \($name)"' ${stateDir}/homelab.json)
+            addTokens homelab ${stateDir}/homelab.json
           fi
 
           if [ "$tier" = ${openseoTier} ]; then
@@ -270,11 +273,7 @@ in
             while read -r service; do
               expected+=("openseo/$service")
             done < <(jq -r '.services | keys[]' ${stateDir}/openseo.json)
-            while read -r token service; do
-              tokens[$token]="openseo/$service"
-            done < <(jq -r '.services | to_entries[] | .key as $name
-              | ([$name] + [(.value.networks // {}) | to_entries[] | (.value // {}).aliases // [] | .[]])
-              | map(select(. != null)) | unique[] | "\(.) \($name)"' ${stateDir}/openseo.json)
+            addTokens openseo ${stateDir}/openseo.json
           fi
 
           domain=$(grep '^CADDY_DOMAIN=' ${checkout}/homelab.env | cut -d= -f2)
