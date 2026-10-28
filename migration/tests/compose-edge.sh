@@ -8,7 +8,7 @@ for tool in docker-compose jq git awk diff; do
   command -v "$tool" >/dev/null 2>&1 || { echo "compose-edge: missing tool: $tool" >&2; exit 2; }
 done
 
-root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd -P)
+root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$root" || exit 2
 git cat-file -e "$baseline^{commit}" 2>/dev/null || { echo "compose-edge: baseline $baseline is not in $root" >&2; exit 2; }
 
@@ -191,7 +191,7 @@ lint_one() {
 }
 
 diff_runs() {
-  sh scripts/compose-diff.sh homelab compose.yaml "$1" > "$scratch/diff.out" 2>&1
+  sh migration/compose-diff.sh homelab compose.yaml "$1" > "$scratch/diff.out" 2>&1
   status=$?
   cat "$scratch/diff.out"
   [ "$status" -le 1 ]

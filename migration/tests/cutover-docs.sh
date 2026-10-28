@@ -105,7 +105,7 @@ done | tee -a "$failure_log"
 
 for doc in "$cutover" "$hardware"; do
   grep -oE '`[^`]+`' "$doc" | tr -d '`' | sed -E 's|^\./||; s|[#:].*$||; s|[),.;]+$||' \
-    | grep -E '^((apps|modules|hosts|docs|secrets|scripts|tests)/[A-Za-z0-9_./-]*|flake\.nix|flake\.lock|compose\.yaml|homelab\.env|\.sops\.yaml|\.gitleaks\.toml|README\.md)$' \
+    | grep -E '^((apps|modules|hosts|docs|migration|secrets|scripts|tests)/[A-Za-z0-9_./-]*|flake\.nix|flake\.lock|compose\.yaml|homelab\.env|\.sops\.yaml|\.gitleaks\.toml|README\.md)$' \
     | grep -v '[<>*]' | sort -u | while IFS= read -r path; do
       [ -e "$path" ] || printf 'FAIL: %s references repo path %s, which does not exist in the branch\n' "$doc" "$path"
     done

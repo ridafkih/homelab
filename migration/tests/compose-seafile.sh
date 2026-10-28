@@ -241,7 +241,7 @@ check "compose-lint exit" "$lint_rc" "0"
 [ "$lint_rc" -eq 0 ] || printf '%s\n' "$lint_out" | sed 's/^/    | /'
 
 diff_rc=0
-diff_out=$(cd "$repo" && env DOCKER_HOST="$docker_host" sh scripts/compose-diff.sh homelab compose.yaml "$app" 2>&1) || diff_rc=$?
+diff_out=$(cd "$repo" && env DOCKER_HOST="$docker_host" sh migration/compose-diff.sh homelab compose.yaml "$app" 2>&1) || diff_rc=$?
 if [ "$diff_rc" -le 1 ]; then pass; else fail "compose-diff exit $diff_rc: $diff_out"; fi
 dropped=$(printf '%s\n' "$diff_out" | sed -n '/does not define:$/,$p' | sed -n 's/^  - //p')
 for service in $services; do

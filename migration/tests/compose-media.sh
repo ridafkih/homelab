@@ -132,13 +132,13 @@ changed_lines() {
 }
 
 diff_status=0
-sh scripts/compose-diff.sh homelab compose.yaml apps/media/compose.yaml > "$scratch/media.diff" 2>&1 || diff_status=$?
+sh migration/compose-diff.sh homelab compose.yaml apps/media/compose.yaml > "$scratch/media.diff" 2>&1 || diff_status=$?
 check "compose-diff media exits 1" "$diff_status" 1
 check "compose-diff media changes exactly seven image lines each way" "$(changed_lines "$scratch/media.diff" | grep -cE '^[-+] *"image": ' || true)" 14
 check "compose-diff media changes nothing but images" "$(changed_lines "$scratch/media.diff" | grep -vE '^[-+] *"image": ' || true)" ""
 
 diff_status=0
-sh scripts/compose-diff.sh homelab compose.yaml apps/jellyfin/compose.yaml > "$scratch/jellyfin.diff" 2>&1 || diff_status=$?
+sh migration/compose-diff.sh homelab compose.yaml apps/jellyfin/compose.yaml > "$scratch/jellyfin.diff" 2>&1 || diff_status=$?
 check "compose-diff jellyfin exits 1" "$diff_status" 1
 check "compose-diff jellyfin swaps the image pin" "$(changed_lines "$scratch/jellyfin.diff" | grep -cE '^[-+] *"image": ' || true)" 2
 check "compose-diff jellyfin drops runtime nvidia" "$(changed_lines "$scratch/jellyfin.diff" | grep -cE '^- *"runtime": "nvidia"' || true)" 1

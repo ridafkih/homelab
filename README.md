@@ -33,9 +33,10 @@ apps/              one directory per Compose app, plus its config files
 compose.yaml       the homelab project, which includes the apps under apps/
 homelab.env        non-secret settings shared by the Compose apps
 secrets/           sops-encrypted secrets and the map from secrets to env files
-scripts/           Compose lint and diff, the VM smoke run, the secrets migration
-tests/             NixOS VM tests, eval checks and doc checks
-docs/              hardware, restore, cutover, build host and decision records
+scripts/           Compose lint and the VM smoke run
+tests/             flake checks (VM tests, eval checks, shell suites) and their fixtures
+docs/              hardware, restore, cutover and decision records
+migration/         Arch-to-NixOS tooling, deleted after cutover
 .github/           CI: evaluates the flake and builds the host
 ```
 
@@ -55,7 +56,7 @@ sudo docker restart jellyfin
 journalctl -u homelab-compose
 ```
 
-Images are pinned by digest. `nix flake check` runs the tests; [docs/build-host.md](./docs/build-host.md) covers building and the VM smoke run.
+Images are pinned by digest. `nix flake check` runs the tests; [migration/build-host.md](./migration/build-host.md) covers building and the VM smoke run.
 
 ## Secrets
 

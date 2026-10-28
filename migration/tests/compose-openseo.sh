@@ -168,7 +168,7 @@ sh scripts/compose-lint.sh --env-file homelab.env --env-file "$committed_env" "$
 check "compose-lint without --secret-env flags the secret interpolations" "$lint_bare_status" "1"
 
 diff_status=0
-sh scripts/compose-diff.sh openseo openseo/compose.yaml "$compose_file" > "$scratch/diff.out" 2> "$scratch/diff.err" || diff_status=$?
+sh migration/compose-diff.sh openseo openseo/compose.yaml "$compose_file" > "$scratch/diff.out" 2> "$scratch/diff.err" || diff_status=$?
 if [ "$diff_status" -le 1 ]; then pass; else fail "compose-diff exit $diff_status: $(cat "$scratch/diff.err")"; fi
 check "services only in the old file" "$(grep -c 'does not define' "$scratch/diff.out" || true)" "0"
 grep -E '^[+-]' "$scratch/diff.out" | grep -vE '^(\+\+\+|---) ' > "$scratch/changes" || true

@@ -2,7 +2,7 @@
 set -eu
 
 usage() {
-  echo "usage: windows.sh [DOCKER_INSPECT_JSON [REPO_DIGESTS_JSON]]" >&2
+  echo "usage: compose-windows.sh [DOCKER_INSPECT_JSON [REPO_DIGESTS_JSON]]" >&2
   exit 2
 }
 

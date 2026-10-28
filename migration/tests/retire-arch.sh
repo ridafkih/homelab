@@ -28,7 +28,7 @@ for dir in host config openseo; do
   fi
 done
 
-allowed=".github .gitignore .gitleaks.toml .sops.yaml LICENSE README.md apps compose.yaml docs flake.lock flake.nix homelab.env hosts modules scripts secrets tests"
+allowed=".github .gitignore .gitleaks.toml .sops.yaml LICENSE README.md apps compose.yaml docs flake.lock flake.nix homelab.env hosts migration modules scripts secrets tests"
 top_level="$(git ls-files | cut -d/ -f1 | sort -u)"
 for entry in $top_level; do
   case " $allowed " in
@@ -68,7 +68,7 @@ else
 fi
 
 reference_pattern='(^|[^a-zA-Z0-9_./-])host/|\.\./config/|\.env\.example|Makefile|\bmake (up|down|pull|update|ps|restart)\b|COMPOSE_PROFILES'
-code_hits="$(git grep -nE "$reference_pattern" -- flake.nix hosts modules apps scripts .github ':!scripts/tests' || true)"
+code_hits="$(git grep -nE "$reference_pattern" -- flake.nix hosts modules apps scripts .github || true)"
 if [ -n "$code_hits" ]; then
   fail "code still references retired Arch tooling:"
   echo "$code_hits"

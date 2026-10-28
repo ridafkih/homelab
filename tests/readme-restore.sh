@@ -56,7 +56,7 @@ for doc in "$readme" "$restore"; do
     [ -e "$base/$target" ] || printf 'FAIL: %s links to %s, which does not exist\n' "$doc" "$target"
   done
   grep -oE '`[^`]+`' "$doc" | tr -d '`' | sed -E 's|^\./||; s|[#:].*$||; s|[),.;]+$||' \
-    | grep -E '^((apps|modules|hosts|docs|secrets|scripts|tests)(/[A-Za-z0-9_./-]*)?|flake\.nix|flake\.lock|compose\.yaml|homelab\.env|\.sops\.yaml|\.gitleaks\.toml|README\.md|LICENSE)$' \
+    | grep -E '^((apps|modules|hosts|docs|migration|secrets|scripts|tests)(/[A-Za-z0-9_./-]*)?|flake\.nix|flake\.lock|compose\.yaml|homelab\.env|\.sops\.yaml|\.gitleaks\.toml|README\.md|LICENSE)$' \
     | grep -v '[<>*]' | sort -u | while IFS= read -r path; do
       [ -e "$path" ] || printf 'FAIL: %s names repo path %s, which does not exist in the branch\n' "$doc" "$path"
     done
