@@ -205,6 +205,24 @@ if [ -z "$pin_line" ] || [ -z "$stop_line" ] || [ "$pin_line" -gt "$stop_line" ]
   fail "$cutover #state: does not pin a Mullvad exit node before stopping tailscaled, so the carried prefs keep auto:any"
 fi
 require_in_section state "AutoExitNode // \"\"" 'does not check that the carried prefs have no AutoExitNode'
+state_blocks=$(printf '%s\n' "$state_text" | awk '/^[[:space:]]*(```|~~~)/ { if (!fenced) block++; fenced = !fenced; next } fenced { print block "\t" $0 }')
+block_of() {
+  printf '%s\n' "$state_blocks" | grep -E -- "$1" | head -n1 | cut -f1
+}
+relay_guard_block=$(block_of '\[ -n "\$mullvad" \] \|\| \{.*exit 1')
+pin_block=$(block_of 'tailscale set --exit-node="?\$')
+prefs_guard_block=$(block_of '\[ -z "\$\(tailscale debug prefs \| jq -r .\.AutoExitNode // "".\)" \] \|\| \{.*exit 1')
+poweroff_block=$(block_of 'poweroff')
+stop_block=$(block_of 'systemctl stop tailscaled')
+if [ -z "$relay_guard_block" ] || [ "$relay_guard_block" != "$pin_block" ]; then
+  fail "$cutover #state: the Mullvad pin does not exit when no relay is online, so an empty address clears the exit node"
+fi
+if [ -z "$prefs_guard_block" ] || [ "$prefs_guard_block" != "$pin_block" ]; then
+  fail "$cutover #state: the Mullvad pin does not exit when AutoExitNode is still set"
+fi
+if [ -z "$pin_block" ] || [ "$pin_block" = "$stop_block" ] || [ "$pin_block" = "$poweroff_block" ]; then
+  fail "$cutover #state: the Mullvad pin shares a block with stopping tailscaled or poweroff, so the box goes down before a STOP can be acted on"
+fi
 require_in_section state 'storage.?driver|docker info' 'checks the Docker storage driver before copying volumes'
 require_in_section install 'virtual media' 'boots the ISO over the KVM virtual media'
 require_in_section install 'readlink -f' 'gates on readlink -f of the by-id path'
