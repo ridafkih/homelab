@@ -214,6 +214,12 @@ let
           assert homelab.succeed("systemctl show -P ExecStop egress-policy.service").strip() == ""
           assert "tailscaled" not in homelab.succeed("systemctl show --value -p BindsTo -p PartOf -p Requires egress-policy.service")
 
+      with subtest("the host's own mullvad-exit unit runs with its packaged inputs and leaves a logged-out tailscaled alone"):
+          homelab.succeed("systemctl start mullvad-exit.service")
+          assert homelab.succeed("systemctl show -P Result mullvad-exit.service").strip() == "success"
+          homelab.succeed("journalctl -u mullvad-exit.service -b | grep -q 'the egress floor keeps traffic in'")
+          assert_rules_exact("after mullvad-exit ran")
+
       with subtest("rules persist after systemctl stop tailscaled"):
           homelab.succeed("systemctl stop tailscaled.service")
           homelab.succeed("systemctl is-active egress-policy.service")
