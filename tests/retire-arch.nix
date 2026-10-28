@@ -20,12 +20,11 @@ let
     "secrets"
     "tests"
   ];
-  ownedByParallelSlices = [ ".github" ];
   retired = [ "host" "config" "openseo" "Makefile" ".env.example" ];
 
   present = builtins.attrNames (builtins.readDir self);
   extras = lib.subtractLists allowed present;
-  missing = lib.subtractLists (present ++ ownedByParallelSlices) allowed;
+  missing = lib.subtractLists present allowed;
   stillTracked = builtins.filter (name: builtins.pathExists (self + "/${name}")) retired;
 
   problems =
