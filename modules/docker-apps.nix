@@ -79,6 +79,13 @@ let
 
   ownedDataDirs = [ config.homelab.dataDir ] ++ map (path: "${config.homelab.dataDir}/${path}") [ "jellyfin" "jellyfin/config" "jellyfin/cache" "jellyseerr" "jellyseerr/config" ];
 
+  hostGateway = "172.17.0.1";
+  committedEnv = builtins.listToAttrs (
+    map
+      (line: let parts = lib.splitString "=" line; in lib.nameValuePair (builtins.head parts) (lib.concatStringsSep "=" (builtins.tail parts)))
+      (builtins.filter (line: line != "") (lib.splitString "\n" (builtins.readFile ../homelab.env)))
+  );
+
   autoAllocatedPools = [
     { base = "172.17.0.0/16"; size = 16; }
     { base = "172.18.0.0/16"; size = 16; }
@@ -112,6 +119,7 @@ in
           max-size = "10m";
           max-file = "3";
         };
+        bip = "${hostGateway}/16";
         default-address-pools = autoAllocatedPools;
       };
     };
@@ -134,6 +142,13 @@ in
         mode = "0755";
       };
     });
+
+    assertions = [
+      {
+        assertion = "${committedEnv.CADDY_HOST_MACHINE_HOSTNAME or "unset"}/16" == (config.virtualisation.docker.daemon.settings.bip or null);
+        message = "docker0's address (the Docker daemon bip) must be homelab.env CADDY_HOST_MACHINE_HOSTNAME/16, the address Caddy uses to reach host services";
+      }
+    ];
 
     sops.templates = lib.mkMerge (
       map (consumer: { ${consumer.template}.reloadUnits = [ consumer.unit ]; }) templateConsumers

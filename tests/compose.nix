@@ -88,6 +88,16 @@ let
     daemonLogRotation = (daemon.log-opts or null) == { max-size = "10m"; max-file = "3"; };
     daemonNoDns = !(daemon ? dns);
     daemonNoRuntimes = !(daemon ? runtimes);
+    daemonBridgeIsHostGateway = (daemon.bip or null) == "172.17.0.1/16";
+    daemonPoolsSkipFixedSubnets =
+      let bases = map (pool: pool.base) (daemon.default-address-pools or [ ]);
+      in bases != [ ] && !(builtins.elem "172.19.0.0/16" bases) && !(builtins.elem "172.20.0.0/16" bases);
+    hostGatewayMismatchFailsEval =
+      let
+        moved = host.extendModules { modules = [ { virtualisation.docker.daemon.settings.bip = lib.mkForce "172.30.0.1/16"; } ]; };
+        failing = config: builtins.length (builtins.filter (a: !a.assertion) config.assertions);
+      in
+      failing moved.config > failing cfg;
 
     extraFilesType =
       extraFilesOpt != null
@@ -312,6 +322,9 @@ let
 
       caddy_answers()
       adguard_answers()
+
+      docker0 = machine.succeed("ip -4 -o addr show dev docker0").split()[3]
+      assert docker0 == "172.17.0.1/16", f"docker0 is {docker0}, but homelab.env CADDY_HOST_MACHINE_HOSTNAME is 172.17.0.1"
 
       rendered = machine.succeed("cat ${dataDir}/adguardhome/conf/AdGuardHome.yaml")
       assert "dummy-adguard-ADGUARD_USER" in rendered, "adguard-init did not render the test user"
