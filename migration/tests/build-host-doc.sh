@@ -63,7 +63,7 @@ if grep -nE 'rsync (-a|--)|--rsync-path' "$doc"; then
   fail 'migration/build-host.md still describes an rsync transport (code reaches the box by git push)'
 fi
 
-if grep -nE '10\.0\.|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|ts\.net|/Users/|/home/[a-z]|id_ed25519|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+' "$doc"; then
+if grep -nE '10\.0\.|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|ts\.net|/[U]sers/|/home/[a-z]|id_ed25519|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+' "$doc"; then
   fail 'migration/build-host.md exposes a host, address, user, key path or account'
 fi
 

@@ -216,7 +216,7 @@ for doc in "$readme" "$restore"; do
 done | tee -a "$failure_log"
 
 for doc in "$readme" "$restore"; do
-  grep -nE 'ts\.net|/Users/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|op://[^<$]|\b([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b|\b[0-9a-f]{32}\b|\b[a-z0-9]{26}\b|\b[0-9]{16}\b|\b2[0-9a-f]{3}:[0-9a-f]{1,4}:' "$doc" \
+  grep -nE 'ts\.net|/[U]sers/|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|op://[^<$]|\b([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b|\b[0-9a-f]{32}\b|\b[a-z0-9]{26}\b|\b[0-9]{16}\b|\b2[0-9a-f]{3}:[0-9a-f]{1,4}:' "$doc" \
     | grep -vE '2606:4700:' | sed "s|^|FAIL: $doc exposes an identifier on the never-public list (0013): |"
 done | tee -a "$failure_log"
 
