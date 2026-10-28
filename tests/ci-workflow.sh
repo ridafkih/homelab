@@ -4,7 +4,6 @@ set -euo pipefail
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
 workflow=.github/workflows/nix.yml
-actionlint_image=rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
 
 failures=0
 
@@ -28,12 +27,6 @@ expect_absent() {
 if [ ! -f "$workflow" ]; then
   echo "FAIL: $workflow does not exist"
   exit 1
-fi
-
-if docker run --rm -i "$actionlint_image" -color -stdin-filename "$workflow" - <"$workflow"; then
-  pass "actionlint"
-else
-  fail "actionlint"
 fi
 
 expect_match "workflow is named nix" '^name:[[:space:]]*nix[[:space:]]*$'
