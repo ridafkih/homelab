@@ -36,6 +36,7 @@ let
 
   expectations = {
     vmModulePresent = builtins.pathExists vmModulePath;
+    vmReadsDumpDirFromBackupModule = lib.hasInfix "config.homelab.backup.dumpDir" vmSource && !(lib.hasInfix "/var/backups/" vmSource);
     scriptPresent = builtins.pathExists scriptPath;
 
     vmMemorySize = vm.virtualisation.memorySize == 6144;

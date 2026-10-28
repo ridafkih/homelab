@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 let
-  dumpDir = "/var/backups/homelab-db";
+  dumpDir = config.homelab.backup.dumpDir;
 
   systemPaths = [
     "/etc"
@@ -116,33 +116,42 @@ let
   };
 in
 {
-  services.restic.backups = {
-    disk1 = job "/mnt/disk1/seafile" "/mnt/disk2/backup/restic" // {
-      backupPrepareCommand = lib.getExe databaseDumps;
-      timerConfig = {
-        OnCalendar = "*-*-* 03:30";
-        Persistent = true;
-        RandomizedDelaySec = "10m";
+  options.homelab.backup.dumpDir = lib.mkOption {
+    type = lib.types.str;
+    default = "/var/backups/homelab-db";
+    readOnly = true;
+    description = "Where the nightly database dumps are written before restic-backups-disk1 runs.";
+  };
+
+  config = {
+    services.restic.backups = {
+      disk1 = job "/mnt/disk1/seafile" "/mnt/disk2/backup/restic" // {
+        backupPrepareCommand = lib.getExe databaseDumps;
+        timerConfig = {
+          OnCalendar = "*-*-* 03:30";
+          Persistent = true;
+          RandomizedDelaySec = "10m";
+        };
+      };
+      disk2 = job "/mnt/disk2/seafile" "/mnt/disk1/backup/restic" // {
+        timerConfig = null;
       };
     };
-    disk2 = job "/mnt/disk2/seafile" "/mnt/disk1/backup/restic" // {
-      timerConfig = null;
-    };
-  };
 
-  systemd.services = {
-    restic-backups-disk1 = lib.recursiveUpdate unit {
-      wants = [ "restic-backups-disk2.service" ];
+    systemd.services = {
+      restic-backups-disk1 = lib.recursiveUpdate unit {
+        wants = [ "restic-backups-disk2.service" ];
+      };
+      restic-backups-disk2 = lib.recursiveUpdate unit {
+        after = unit.after ++ [ "restic-backups-disk1.service" ];
+      };
     };
-    restic-backups-disk2 = lib.recursiveUpdate unit {
-      after = unit.after ++ [ "restic-backups-disk1.service" ];
-    };
-  };
 
-  assertions = [
-    {
-      assertion = config.networking.hostName == "homelab";
-      message = "networking.hostName must stay homelab: the restic snapshots and their prune grouping (--group-by host,tags) are keyed on it";
-    }
-  ];
+    assertions = [
+      {
+        assertion = config.networking.hostName == "homelab";
+        message = "networking.hostName must stay homelab: the restic snapshots and their prune grouping (--group-by host,tags) are keyed on it";
+      }
+    ];
+  };
 }
