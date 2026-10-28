@@ -351,7 +351,7 @@ in
 
             for host in "''${!routes[@]}"; do
               [ "''${routeOk[$host]}" = true ] && continue
-              code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "$host:443:127.0.0.1" "https://$host/" || true)
+              code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "$host:443:127.0.0.1" "https://$host" || true)
               routeCode[$host]=$code
               case "$code" in
                 2??|3??) routeOk[$host]=true ;;
