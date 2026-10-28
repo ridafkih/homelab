@@ -7,7 +7,10 @@ let
       case "$1 ''${2:?}" in
         "status --json") cat "$FAKE_DIR/status.json" ;;
         "debug prefs") cat "$FAKE_DIR/prefs.json" ;;
-        "exit-node suggest") cat "$FAKE_DIR/suggest.txt" ;;
+        "exit-node suggest")
+          if [ -e "$FAKE_DIR/suggest-fails" ]; then echo "no preferred DERP region" >&2; exit 1; fi
+          cat "$FAKE_DIR/suggest.txt"
+          ;;
         set*) shift; printf '%s\n' "$*" >> "$FAKE_DIR/set.log" ;;
         *) echo "unexpected tailscale call: $*" >&2; exit 64 ;;
       esac
@@ -43,7 +46,7 @@ let
     Peer = lib.listToAttrs (map (p: lib.nameValuePair "key-${p.ID}" p) peers);
   };
 
-  scenario = name: { state ? "Running", exit, peers, auto ? "", suggest ? "", expectSet, expectExit ? 0 }: ''
+  scenario = name: { state ? "Running", exit, peers, auto ? "", suggest ? "", suggestFails ? false, expectSet, expectExit ? 0 }: ''
     dir=$PWD/${name}
     mkdir -p "$dir"
     cat > "$dir/status.json" <<'JSON'
@@ -51,6 +54,7 @@ let
     JSON
     printf '%s\n' ${lib.escapeShellArg (builtins.toJSON { AutoExitNode = auto; })} > "$dir/prefs.json"
     printf 'Suggested exit node: %s\nTo accept this suggestion, use `tailscale set --exit-node=%s`.\n' ${lib.escapeShellArg suggest} ${lib.escapeShellArg suggest} > "$dir/suggest.txt"
+    ${lib.optionalString suggestFails ''touch "$dir/suggest-fails"''}
     code=0
     FAKE_DIR=$dir ${lib.getExe watchdog} > "$dir/out" 2>&1 || code=$?
     if [ "$code" != ${toString expectExit} ]; then
@@ -77,6 +81,13 @@ let
       exit = "laptop";
       peers = [ mullvadFar mullvadNear mullvadDown laptop ];
       suggest = "laptop.example.";
+      expectSet = "--exit-node=100.64.0.11";
+    };
+    failedSuggestionFallsBackToPriority = {
+      exit = "laptop";
+      auto = "any";
+      peers = [ mullvadFar mullvadNear laptop ];
+      suggestFails = true;
       expectSet = "--exit-node=100.64.0.11";
     };
     noExitNodeGetsMullvad = { exit = null; peers = [ mullvadNear laptop ]; expectSet = "--exit-node=100.64.0.11"; };
