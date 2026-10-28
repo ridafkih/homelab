@@ -47,7 +47,12 @@ defined_units=$(
       systemd-timesyncd network-online.target multi-user.target mnt-disk1.mount mnt-disk2.mount data.mount
   } | sort -u
 )
-defined_timers=$(for job in $restic_timer_jobs; do printf 'restic-backups-%s\n' "$job"; done)
+defined_timers=$(
+  {
+    for job in $restic_timer_jobs; do printf 'restic-backups-%s\n' "$job"; done
+    grep -rhoE 'systemd\.timers\.[A-Za-z0-9_-]+' modules hosts | sed 's/^systemd\.timers\.//'
+  } | sort -u
+)
 
 slug() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9 -]//g; s/ /-/g'

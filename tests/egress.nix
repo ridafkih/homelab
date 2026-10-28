@@ -8,7 +8,7 @@ let
   networkModule = self + "/modules/network.nix";
   tailscaleModule = self + "/modules/tailscale.nix";
   egressModule = self + "/modules/egress-policy.nix";
-  ownedSources = [ tailscaleModule egressModule (self + "/tests/egress.nix") ];
+  ownedSources = [ tailscaleModule egressModule (self + "/modules/mullvad-exit.sh") (self + "/tests/egress.nix") ];
   modulesPresent = builtins.pathExists tailscaleModule && builtins.pathExists egressModule;
 
   sourceOf = path: if builtins.pathExists path then builtins.readFile path else "";
@@ -55,10 +55,13 @@ let
     tailscaleClientRouting = modulesPresent && ts.useRoutingFeatures == "client";
     tailscaleOpenFirewall = modulesPresent && ts.openFirewall;
     tailscaleSetFlags = modulesPresent && builtins.all (flag: builtins.elem flag ts.extraSetFlags) [
-      "--exit-node=auto:any"
       "--exit-node-allow-lan-access"
       "--accept-dns=false"
     ];
+    tailscaleExitNodeLeftToMullvadExit = modulesPresent && !(builtins.any (lib.hasPrefix "--exit-node=") ts.extraSetFlags);
+    mullvadExitService = modulesPresent && cfg.systemd.services ? mullvad-exit;
+    mullvadExitTimer = modulesPresent && (cfg.systemd.timers.mullvad-exit.timerConfig.OnUnitActiveSec or null) == "1min";
+    mullvadExitOffWhenEgressDisabled = modulesPresent && !(disabled.systemd.services ? mullvad-exit) && !(disabled.systemd.timers ? mullvad-exit);
     tailscaleNoAuthKey = modulesPresent && ts.authKeyFile == null;
     tailscaleMtu = modulesPresent && (cfg.systemd.services.tailscaled.environment.TS_DEBUG_MTU or null) == "1500";
 
