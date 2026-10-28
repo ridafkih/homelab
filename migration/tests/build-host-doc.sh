@@ -19,6 +19,7 @@ if [ ! -f "$doc" ]; then
   exit 1
 fi
 
+tilde='~'
 for text in \
   'Nice=19' \
   'IOSchedulingClass=idle' \
@@ -34,7 +35,7 @@ for text in \
   'max-free = 107374182400' \
   '--prefer-upstream-nix' \
   '--extra-conf' \
-  '~/homelab-nixos-build' \
+  "$tilde/homelab-nixos-build" \
   'repo.git' \
   'git init --bare' \
   'nice -n19 ionice -c3' \
@@ -54,7 +55,7 @@ grep -iE 'restart' "$doc" | grep -qiE 'never|only' \
   || fail 'migration/build-host.md does not state the never-restart rule'
 grep -iE 'restart' "$doc" | grep -q 'nix-daemon' \
   || fail 'the restart rule does not name nix-daemon as the only unit that may restart'
-grep -iE '~/homelab([^-]|$)' "$doc" | grep -qiE 'never|not|no ' \
+grep -iE '[~]/homelab([^-]|$)' "$doc" | grep -qiE 'never|not|no ' \
   || fail 'migration/build-host.md does not forbid building in ~/homelab'
 grep -qiE 'trusted-users' "$doc" \
   || fail 'migration/build-host.md does not say trusted-users is left unset'
