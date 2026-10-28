@@ -108,7 +108,7 @@ All on Arch, while it is still serving. Nothing here is destructive.
     ```sh
     git clone -q --depth 1 --branch nixos https://github.com/ridafkih/homelab /var/tmp/homelab-nixos
     grep -rhoE 'image: *[^ ]+@sha256:[0-9a-f]{64}' /var/tmp/homelab-nixos/apps | awk '{print $2}' | sort -u > /var/tmp/pinned-images.txt
-    docker save -o /mnt/disk2/migration/images.tar $(cat /var/tmp/pinned-images.txt)
+    sudo docker save -o /mnt/disk2/migration/images.tar $(cat /var/tmp/pinned-images.txt)
     docker images --digests --format '{{.Repository}}:{{.Tag}} {{.Digest}} {{.ID}}' > /var/tmp/image-tags.txt
     sudo cp /var/tmp/pinned-images.txt /var/tmp/image-tags.txt /mnt/disk2/migration/
     rm -rf /var/tmp/homelab-nixos
@@ -316,7 +316,7 @@ Run these in order on the new system. **The first NixOS boot is the point of no 
 
    ```sh
    tailscale status --self --json | jq -r '.Self.HostName, .Self.TailscaleIPs[0]'
-   cat /mnt/disk2/migration/tailscale-self.txt
+   sudo cat /mnt/disk2/migration/tailscale-self.txt
    tailscale status --json | jq -r '.ExitNodeStatus.Online'
    systemctl is-active egress-policy tailscaled
    ip rule show | grep -E '^5(200|205|280|300):'
@@ -352,7 +352,7 @@ Run these in order on the new system. **The first NixOS boot is the point of no 
 5. **Volumes and image digests.**
 
    ```sh
-   docker volume ls -q | sort | diff /mnt/disk2/migration/state/volumes.txt -
+   docker volume ls -q | sort | sudo diff /mnt/disk2/migration/state/volumes.txt -
    systemctl is-active homelab-compose openseo-compose windows-compose
    docker ps --format '{{.Names}} {{.Image}}' | grep -v '@sha256:'
    ```
@@ -461,7 +461,7 @@ Run these in order on the new system. **The first NixOS boot is the point of no 
 With tailscaled down, the kill switch blocks everything except the LAN, Docker and the Cloudflare edge, so the box is still reachable over LAN ssh at 10.0.0.98.
 
 - `journalctl -u tailscaled -b` shows why. If it asks for a login, the restored state wasn't picked up; compare `/var/lib/tailscale` with `/mnt/disk2/migration/state/tailscale`. A fresh sign-in is Rida's to do.
-- Image pulls fail while it's down. If a compose unit failed for that reason, start it again once Tailscale is up. As a last resort, `docker load -i /mnt/disk2/migration/images.tar` and re-tag from `image-tags.txt`, as in pre-flight step 10.
+- Image pulls fail while it's down. If a compose unit failed for that reason, start it again once Tailscale is up. As a last resort, `sudo docker load -i /mnt/disk2/migration/images.tar` and re-tag from `image-tags.txt`, as in pre-flight step 10.
 
 ## Rollback
 
