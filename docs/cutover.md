@@ -324,7 +324,7 @@ Run these in order on the new system. **The first NixOS boot is the point of no 
    tailscale status --json | jq -r '.ExitNodeStatus.Online'
    sudo systemctl start mullvad-exit.service
    tailscale status --json | jq -r '.ExitNodeStatus.ID as $id | .Peer[] | select(.ID == $id) | .Tags | index("tag:mullvad-exit-node") != null'
-   tailscale debug prefs | jq -r '.AutoExitNode'
+   tailscale debug prefs | jq -r '.AutoExitNode // ""'
    systemctl is-active egress-policy tailscaled mullvad-exit.timer
    ip rule show | grep -E '^5(200|205|280|300):'
    ip -6 rule show | grep -E '^5(200|205|280|300):'
