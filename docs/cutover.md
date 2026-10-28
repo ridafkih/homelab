@@ -318,13 +318,16 @@ Run these in order on the new system. **The first NixOS boot is the point of no 
    tailscale status --self --json | jq -r '.Self.HostName, .Self.TailscaleIPs[0]'
    sudo cat /mnt/disk2/migration/tailscale-self.txt
    tailscale status --json | jq -r '.ExitNodeStatus.Online'
-   systemctl is-active egress-policy tailscaled
+   sudo systemctl start mullvad-exit.service
+   tailscale status --json | jq -r '.ExitNodeStatus.ID as $id | .Peer[] | select(.ID == $id) | .Tags | index("tag:mullvad-exit-node") != null'
+   tailscale debug prefs | jq -r '.AutoExitNode'
+   systemctl is-active egress-policy tailscaled mullvad-exit.timer
    ip rule show | grep -E '^5(200|205|280|300):'
    ip -6 rule show | grep -E '^5(200|205|280|300):'
    curl -fsS https://am.i.mullvad.net/json | jq .mullvad_exit_ip
    ```
 
-   Expected: the same host name and tailnet address as before; the exit node online; both units `active`; for each family, four `5200` rules for the edge prefixes, one `5205` fwmark rule, `5280 lookup main suppress_prefixlength 0` and `5300 unreachable`; and `true`. **STOP** if the node is new or the exit node isn't online (see [If Tailscale won't come up](#if-tailscale-wont-come-up)).
+   Expected: the same host name and tailnet address as before; the exit node online; the exit node is a Mullvad relay (`true`) and pinned rather than auto-picked (an empty line for `AutoExitNode`: `mullvad-exit` replaces Arch's `auto:any`, which could pick any tailnet exit node, with an explicit Mullvad one); all three units `active`; for each family, four `5200` rules for the edge prefixes, one `5205` fwmark rule, `5280 lookup main suppress_prefixlength 0` and `5300 unreachable`; and `true`. **STOP** if the node is new or the exit node isn't online (see [If Tailscale won't come up](#if-tailscale-wont-come-up)).
 
    Then the kill switch. Wait until `homelab-compose` has finished its first start (`systemctl is-active homelab-compose` says `active`) so this doesn't interrupt the first image pull:
 
