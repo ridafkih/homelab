@@ -91,7 +91,9 @@ let
       expectSet = "--exit-node=100.64.0.11";
     };
     noExitNodeGetsMullvad = { exit = null; peers = [ mullvadNear laptop ]; expectSet = "--exit-node=100.64.0.11"; };
-    offlineMullvadNeverChosen = { exit = "laptop"; peers = [ mullvadDown laptop ]; expectSet = ""; expectExit = 1; };
+    offlineMullvadNeverChosen = { exit = "laptop"; peers = [ mullvadDown laptop ]; expectSet = "--exit-node="; expectExit = 1; };
+    noMullvadClearsAutoMode = { exit = null; auto = "any"; peers = [ mullvadDown laptop ]; expectSet = "--exit-node="; expectExit = 1; };
+    noMullvadAndNoExitNodeStaysClear = { exit = null; peers = [ mullvadDown laptop ]; expectSet = ""; expectExit = 1; };
     notRunningDoesNothing = { state = "Stopped"; exit = "laptop"; peers = [ mullvadNear laptop ]; expectSet = ""; };
   };
 in
