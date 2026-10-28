@@ -242,6 +242,7 @@ done
 for item in 'systemctl stop tailscaled' 'curl' 'nvenc' 'digest|sha256' 'sonarr|radarr|prowlarr|arr stack' '/data/media' 'snapshots'; do
   grep -qiE -- "$item" <<<"$post_boot" || fail "$cutover #post-boot: missing $item"
 done
+grep -qF -- "jq -r '.AutoExitNode // \"\"'" <<<"$post_boot" || fail "$cutover #post-boot: reads AutoExitNode without // \"\", so an absent pref prints null instead of the expected empty line"
 for job in $restic_jobs; do
   grep -qF -- "restic-backups-$job" <<<"$post_boot" || fail "$cutover #post-boot: no manual run of restic-backups-$job"
 done
