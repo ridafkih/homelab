@@ -30,7 +30,7 @@ fi
 if [ "$current_is_mullvad" = true ]; then
   choice=$(jq -r --arg id "$current" '.[] | select(.ID == $id) | .TailscaleIPs[0]' <<< "$peers")
 else
-  suggested=$(tailscale exit-node suggest | sed -n 's/^Suggested exit node: //p' | head -n 1)
+  suggested=$( { tailscale exit-node suggest 2> /dev/null || true; } | sed -n 's/^Suggested exit node: //p' | head -n 1)
   choice=$(jq -r --arg name "$suggested" '[.[] | select(.DNSName == $name)][0].TailscaleIPs[0] // ""' <<< "$peers")
   if [ -z "$choice" ]; then
     choice=$(jq -r 'sort_by(-(.Location.Priority // 0), .ID) | .[0].TailscaleIPs[0] // ""' <<< "$peers")
