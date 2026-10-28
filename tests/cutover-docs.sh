@@ -75,7 +75,7 @@ require() {
 
 require_in_section() {
   local name=$1 pattern=$2 why=$3
-  section "$cutover" "$name" | grep -qiE -- "$pattern" || fail "$cutover #$name: $why"
+  grep -qiE -- "$pattern" <<<"$(section "$cutover" "$name")" || fail "$cutover #$name: $why"
 }
 
 anchors="pre-flight windows-vm state install post-boot rollback optional-firewall cleanup"
@@ -228,16 +228,16 @@ for marker in 'findmnt|mountpoint' '10\.0\.0\.98' 'am\.i\.mullvad\.net' 'nvidia-
   fi
 done
 for item in 'systemctl stop tailscaled' 'curl' 'nvenc' 'digest|sha256' 'sonarr|radarr|prowlarr|arr stack' '/data/media' 'snapshots'; do
-  printf '%s\n' "$post_boot" | grep -qiE -- "$item" || fail "$cutover #post-boot: missing $item"
+  grep -qiE -- "$item" <<<"$post_boot" || fail "$cutover #post-boot: missing $item"
 done
 for job in $restic_jobs; do
-  printf '%s\n' "$post_boot" | grep -qF -- "restic-backups-$job" || fail "$cutover #post-boot: no manual run of restic-backups-$job"
+  grep -qF -- "restic-backups-$job" <<<"$post_boot" || fail "$cutover #post-boot: no manual run of restic-backups-$job"
 done
 
 for item in 'sfdisk' 'partclone' 'efibootmgr' 'migration/rollback' 'boot menu|one-time boot|bootnext'; do
   require_in_section rollback "$item" "rollback does not use $item"
 done
-section "$cutover" rollback | grep -qiE 'point of no return|first (nixos )?boot' || fail "$cutover #rollback: no separate notes for before and after the point of no return"
+grep -qiE 'point of no return|first (nixos )?boot' <<<"$(section "$cutover" rollback)" || fail "$cutover #rollback: no separate notes for before and after the point of no return"
 require_in_section optional-firewall 'rida' 'optional firewall is not left as Rida'"'"'s choice'
 require_in_section optional-firewall '8006|3389' 'optional firewall does not name the ports it would close'
 require_in_section cleanup 'HF_TOKEN' 'cleanup does not delete the stale HF_TOKEN'
