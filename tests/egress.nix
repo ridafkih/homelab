@@ -60,6 +60,7 @@ let
     ];
     tailscaleExitNodeLeftToMullvadExit = modulesPresent && !(builtins.any (lib.hasPrefix "--exit-node=") ts.extraSetFlags);
     mullvadExitService = modulesPresent && cfg.systemd.services ? mullvad-exit;
+    mullvadExitStartsWithTailscaled = modulesPresent && builtins.elem "tailscaled.service" (cfg.systemd.services.mullvad-exit.wantedBy or [ ]) && builtins.elem "tailscaled.service" (cfg.systemd.services.mullvad-exit.after or [ ]);
     mullvadExitTimer = modulesPresent && (cfg.systemd.timers.mullvad-exit.timerConfig.OnUnitActiveSec or null) == "1min";
     mullvadExitOffWhenEgressDisabled = modulesPresent && !(disabled.systemd.services ? mullvad-exit) && !(disabled.systemd.timers ? mullvad-exit);
     tailscaleNoAuthKey = modulesPresent && ts.authKeyFile == null;

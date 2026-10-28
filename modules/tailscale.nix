@@ -22,6 +22,7 @@ in
   systemd.services.mullvad-exit = lib.mkIf config.homelab.egress.enable {
     description = "Keep the Tailscale exit node on a Mullvad relay";
     after = [ "tailscaled.service" ];
+    wantedBy = [ "tailscaled.service" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = lib.getExe mullvadExit;
