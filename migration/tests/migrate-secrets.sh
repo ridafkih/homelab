@@ -7,7 +7,7 @@ done
 sudo -n true 2> /dev/null || { echo "needs passwordless sudo for the restic file descriptor"; exit 2; }
 
 repo=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/migrate-secrets.XXXXXX")
+scratch=$(mktemp -d -t migrate-secrets.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 
 sentinel=qz7

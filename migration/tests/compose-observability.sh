@@ -31,7 +31,7 @@ repo=$(CDPATH='' cd -- "$repo" && pwd -P)
 git -C "$repo" cat-file -e "$baseline^{commit}" 2>/dev/null || { echo "baseline $baseline is not in $repo" >&2; exit 2; }
 [ -f "$repo/secrets/keys.tsv" ] || { echo "missing $repo/secrets/keys.tsv" >&2; exit 2; }
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/compose-observability.XXXXXX")
+scratch=$(mktemp -d -t compose-observability.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 scratch=$(CDPATH='' cd -- "$scratch" && pwd -P)
 

@@ -19,7 +19,7 @@ repo=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 cd "$repo"
 git cat-file -e "$baseline^{commit}" 2>/dev/null || { echo "baseline $baseline is not in $repo"; exit 2; }
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/compose-dns-ai.XXXXXX")
+scratch=$(mktemp -d -t compose-dns-ai.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 export DOCKER_HOST="unix://$scratch/no-docker-daemon.sock"
 

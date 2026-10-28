@@ -10,7 +10,7 @@ done
 
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd -P)
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/compose-lint-tests.XXXXXX")
+scratch=$(mktemp -d -t compose-lint-tests.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 
 export DOCKER_HOST="unix://$scratch/no-docker-daemon.sock"

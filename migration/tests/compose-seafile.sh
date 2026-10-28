@@ -17,7 +17,7 @@ git -C "$repo" cat-file -e "$baseline^{commit}" 2>/dev/null || { echo "baseline 
 keys="$repo/secrets/keys.tsv"
 [ -f "$keys" ] || { echo "missing $keys"; exit 2; }
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/seafile-tests.XXXXXX")
+scratch=$(mktemp -d -t seafile-tests.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 scratch=$(CDPATH='' cd -- "$scratch" && pwd -P)
 

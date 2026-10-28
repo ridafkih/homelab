@@ -8,7 +8,7 @@ done
 repo=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 cd "$repo"
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/compose-openseo.XXXXXX")
+scratch=$(mktemp -d -t compose-openseo.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 
 export DOCKER_HOST="unix://$scratch/no-docker-daemon.sock"
