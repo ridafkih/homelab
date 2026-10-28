@@ -71,7 +71,7 @@ while :; do
   sleep 5
 done &
 sampler=$!
-nice -n19 ionice -c3 timeout 40m "$1" < /dev/null > "$2/serial.log" 2>&1
+nice -n19 ionice -c3 timeout --foreground 40m "$1" < /dev/null > "$2/serial.log" 2>&1
 code=$?
 kill "$sampler"
 cat "$cgroup/memory.peak" > "$2/memory.peak"
