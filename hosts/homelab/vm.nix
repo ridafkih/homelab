@@ -136,6 +136,7 @@ in
         name = "homelab-vm-checkout";
         runtimeInputs = [ pkgs.coreutils ];
         text = ''
+          stat -c '%U:%G %a %n' "$(dirname ${checkout})"
           mkdir -p ${checkout}
           cp -rT --no-preserve=mode,ownership ${self} ${checkout}
           chown -R ${user}:${user} ${checkout}
@@ -399,7 +400,7 @@ in
           docker stats --no-stream --format '{{.Name}}\t{{.MemUsage}}' > "$out/docker-stats.tsv" || true
           docker images --format '{{.Repository}}:{{.Tag}}\t{{.Size}}' > "$out/images.tsv" || true
           docker ps -a --format '{{.Names}}\t{{.Status}}' > "$out/docker-ps.tsv" || true
-          journalctl -b -u homelab-smoke-tier -u homelab-vm-checkout -u homelab-compose -u openseo-compose -o short-monotonic > "$out/units.log" || true
+          journalctl -b -u systemd-tmpfiles-setup -u homelab-smoke-tier -u homelab-vm-checkout -u homelab-compose -u openseo-compose -o short-monotonic > "$out/units.log" || true
           for member in "''${expected[@]}"; do
             case "''${status[$member]}" in
               healthy|running|completed) ;;
@@ -462,7 +463,15 @@ in
         homelab-vm-checkout = {
           description = "Copy the flake source to the homelab checkout";
           requiredBy = [ "homelab-compose.service" ];
-          before = [ "homelab-compose.service" "homelab-smoke-tier.service" ];
+          wantedBy = [ "sysinit.target" ];
+          after = [ "local-fs.target" ];
+          before = [
+            "sysinit.target"
+            "systemd-tmpfiles-setup.service"
+            "homelab-compose.service"
+            "homelab-smoke-tier.service"
+          ];
+          unitConfig.DefaultDependencies = false;
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
