@@ -1,6 +1,6 @@
 # Restore
 
-How to get data back out of the nightly restic backups. Backups are on-disk only, defined in `modules/backup.nix` ([0012](decisions/0012-selective-on-disk-backups.md)).
+How to get data back out of the nightly restic backups. Backups are on-disk only, defined in `modules/backup.nix` ([0010](decisions/0010-backups.md)).
 
 ## What is where
 

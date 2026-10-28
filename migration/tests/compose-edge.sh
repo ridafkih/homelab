@@ -308,13 +308,13 @@ renders_without_template() {
 check "config/Caddyfile is deleted" test ! -e config/Caddyfile
 check "apps/caddy/Caddyfile has no ollama or pihole routes" caddyfile_has_no_dead_routes
 check "apps/caddy/Caddyfile is $baseline:config/Caddyfile minus the @pihole and @ollama blocks" caddyfile_is_baseline_minus_dead_routes
-check "the Caddyfile move is a byte-identical rename in its own commit (0005 rule 6)" caddyfile_moved_byte_identical_in_own_commit
+check "the Caddyfile move is a byte-identical rename in its own commit (0003)" caddyfile_moved_byte_identical_in_own_commit
 check "grep -r local-network apps/ returns nothing" not_in_apps local-network
 check "no gw_priority under apps/" not_in_apps gw_priority
 check "no macvlan under apps/" not_in_apps macvlan
 check "edge files define exactly their services, networks and volumes" source_layout
 check "edge images are the live tag@sha256 pins and env_files are the rendered templates" source_env_files_and_pins
-check "no commit carries a floating edge image tag (0006 rule 3)" no_floating_tag_in_history
+check "no commit carries a floating edge image tag (0004)" no_floating_tag_in_history
 check "compose-lint passes on the three edge files together" lint_together
 for file in $edge_files; do
   check "compose-lint passes on $file alone" lint_one "$file"
