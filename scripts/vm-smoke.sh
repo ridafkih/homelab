@@ -132,7 +132,7 @@ for boot in $boots; do
   set +e
   NIX_DISK_IMAGE="$dir/root.qcow2" TMPDIR="$dir/tmp" USE_TMPDIR=1 QEMU_KERNEL_PARAMS="$(kernel_params "$boot")" \
     systemd-run --user --scope --quiet -p MemoryMax=7G --unit="vm-smoke-$boot-$$" \
-    sh "$state/scope.sh" "$runner" "$dir"
+    sh "$state/scope.sh" "$runner" "$dir" 9>&-
   qemu_exit=$?
   set -e
 
