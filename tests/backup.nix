@@ -189,7 +189,7 @@ let
     scripts=$(grep -oE '/nix/store/[a-z0-9]{32}-[^/ "]+' ${prepareText} | sort -u)
     test -n "$scripts"
     all=$(for path in $scripts; do if [ -d "$path" ]; then cat "$path"/bin/* 2>/dev/null; else cat "$path"; fi; done)
-    for needle in authentik-postgresql seafile-db pg_dumpall mariadb-dump MYSQL_ROOT_PASSWORD manifest.json /var/backups/homelab-db; do
+    for needle in authentik-postgresql seafile-db pg_dumpall POSTGRES_USER mariadb-dump MYSQL_ROOT_PASSWORD manifest.json /var/backups/homelab-db; do
       printf '%s' "$all" | grep -qF -- "$needle" || { echo "prepare command lacks $needle"; exit 1; }
     done
     printf '%s' "$all" | grep -qE -- '-p openseo|--project-name openseo|--project-name=openseo' || { echo "prepare command lacks the openseo project"; exit 1; }

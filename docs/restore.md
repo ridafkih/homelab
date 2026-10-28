@@ -105,7 +105,7 @@ Authentik. Stop the server and worker so nothing holds the database open, load t
 
 ```bash
 docker stop authentik-server authentik-worker
-docker exec -i authentik-postgresql psql -U authentik -d postgres < /tmp/restore/var/backups/homelab-db/authentik-postgresql.sql
+docker exec -i authentik-postgresql sh -c 'exec psql -U "$POSTGRES_USER" -d postgres' < /tmp/restore/var/backups/homelab-db/authentik-postgresql.sql
 docker start authentik-server authentik-worker
 ```
 
