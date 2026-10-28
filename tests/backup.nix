@@ -156,6 +156,7 @@ let
     disk2HasNoTimer = (job "disk2").timerConfig == null && !(cfg.systemd.timers ? restic-backups-disk2);
     timerUnitExists = cfg.systemd.timers ? restic-backups-disk1;
 
+    dumpDirFromBackupModule = cfg.homelab.backup.dumpDir == "/var/backups/homelab-db" && host.options.homelab.backup.dumpDir.readOnly;
     dumpsOnlyInDisk1 = (job "disk1").backupPrepareCommand != null && (job "disk2").backupPrepareCommand == null;
     disk1WantsDisk2 = builtins.elem "restic-backups-disk2.service" ((service "disk1").wants or [ ]);
     disk2AfterDisk1 = builtins.elem "restic-backups-disk1.service" ((service "disk2").after or [ ]);

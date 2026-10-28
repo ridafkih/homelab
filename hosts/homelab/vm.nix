@@ -76,7 +76,7 @@ in
     let
       checkout = config.homelab.checkoutDir;
       dumpCommand = config.services.restic.backups.disk1.backupPrepareCommand;
-      dumpDir = "/var/backups/homelab-db";
+      dumpDir = config.homelab.backup.dumpDir;
       secrets = config.homelab.secrets;
       docker = config.virtualisation.docker.package;
       user = config.homelab.user;
@@ -391,7 +391,6 @@ in
           done
 
           if [ "$tier" = ${openseoTier} ] && [ -z "$down" ]; then
-            dumps=${dumpDir}
             openseoRunning() {
               docker compose -p openseo ps --services --status running | sort | tr '\n' ' '
             }
@@ -401,14 +400,14 @@ in
             else
               fail db_dumps exit
             fi
-            tail -n 5 "$dumps/authentik-postgresql.sql" 2>/dev/null | grep -q "PostgreSQL database cluster dump complete" \
+            tail -n 5 "${dumpDir}/authentik-postgresql.sql" 2>/dev/null | grep -q "PostgreSQL database cluster dump complete" \
               || fail db_dump authentik-postgresql incomplete
-            tail -n 1 "$dumps/seafile-db.sql" 2>/dev/null | grep -q "Dump completed" \
+            tail -n 1 "${dumpDir}/seafile-db.sql" 2>/dev/null | grep -q "Dump completed" \
               || fail db_dump seafile-db incomplete
             for archive in storage config; do
-              file=$dumps/openseo/$archive.tar.gz
+              file=${dumpDir}/openseo/$archive.tar.gz
               if tar -tzf "$file" > /dev/null 2>&1; then
-                want=$(jq -r --arg name "$archive.tar.gz" '.files[$name]' "$dumps/openseo/manifest.json")
+                want=$(jq -r --arg name "$archive.tar.gz" '.files[$name]' "${dumpDir}/openseo/manifest.json")
                 have=$(sha256sum "$file" | cut -d' ' -f1)
                 [ "$want" = "$have" ] || fail db_dump "openseo/$archive.tar.gz" manifest_mismatch
               else
@@ -423,7 +422,7 @@ in
             done
             record db_dumps_openseo_running "$openseoAfter"
             [ "$openseoAfter" = "$openseoBefore" ] || fail db_dumps openseo_not_restarted
-            record db_dumps_files "$(find "$dumps" -type f | sort | tr '\n' ' ')"
+            record db_dumps_files "$(find "${dumpDir}" -type f | sort | tr '\n' ' ')"
           fi
 
           kernelOom=$(journalctl -k -o cat | grep -ciE 'out of memory|oom-kill|killed process' || true)
