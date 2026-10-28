@@ -30,8 +30,8 @@ let
       }
 
       dump_postgres() {
-        local container=$1 user=$2 target="$dump_dir/$1.sql"
-        docker exec "$container" pg_dumpall --clean --if-exists -U "$user" > "$target.partial"
+        local container=$1 target="$dump_dir/$1.sql"
+        docker exec "$container" sh -c 'exec pg_dumpall --clean --if-exists -U "$POSTGRES_USER"' > "$target.partial"
         tail -n 5 "$target.partial" | grep -q "PostgreSQL database cluster dump complete" || fail "$container dump incomplete"
         mv "$target.partial" "$target"
       }
@@ -77,7 +77,7 @@ let
       }
 
       install -d -m 0700 "$dump_dir"
-      dump_postgres authentik-postgresql authentik
+      dump_postgres authentik-postgresql
       dump_mariadb seafile-db
       dump_openseo
     '';
