@@ -20,6 +20,5 @@ These need the Arch-era history, the live box or tools that only exist on the bu
 | `bash migration/tests/migrate-secrets.sh` | the build host: nix, sops, age, passwordless sudo |
 | `bash migration/tests/retire-arch.sh` | git history back to 9af811a |
 | `bash migration/tests/cutover-docs.sh` | nothing beyond coreutils, gawk and gitleaks |
-| `bash migration/tests/ci-workflow.sh` | docker, for actionlint |
 | `sh migration/tests/build-host-doc.sh` | nothing |
 | `sh migration/tests/build-host-live.sh <evidence-dir> ssh <build-host>` | ssh to the build host and the snapshots taken before Nix was installed |

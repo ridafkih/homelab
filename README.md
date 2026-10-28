@@ -62,9 +62,10 @@ Images are pinned by digest.
 
 - `nix flake check` runs every check in `tests/`: the NixOS VM tests (they need KVM), the eval checks, the shell suites in `tests/shell-suites.nix` (Compose lint, the public-repo exposure scan, `.gitignore`, the README and restore guide), and the host build.
 - `bash tests/secrets-repo.sh` scans the whole git history for secrets. It needs the history, so it runs in CI rather than in the sandbox.
+- `bash tests/ci-workflow.sh` lints the CI workflow with actionlint (it needs docker) and checks it runs every step below.
 - `bash tests/secrets-values.sh` (with `SOPS_AGE_KEY_FILE` set to the admin key) and `bash tests/secrets-age-keys.sh <vault> <token-file> <admin-key-file>` check the real secrets and the keys in 1Password, so they run by hand.
 - `scripts/vm-smoke.sh core|media|obs` boots the whole host as a VM and checks every container and route; see [migration/build-host.md](./migration/build-host.md) for running it before cutover.
-- CI (`.github/workflows/nix.yml`) runs the history scan, evaluates the flake, runs the checks that need no VM and builds the host.
+- CI (`.github/workflows/nix.yml`) runs the history scan, evaluates the flake, builds `.#checks-novm` (every check not listed in `vmChecks` in `flake.nix`) and builds the host.
 
 ## Secrets
 
