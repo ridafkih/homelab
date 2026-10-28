@@ -338,14 +338,32 @@ let
               "done'"
           )
           homelab.wait_until_succeeds("systemctl is-active floor-poll.service")
+          homelab.succeed("rm -f /tmp/rule-events")
+          homelab.succeed(
+              "systemd-run --unit rule-monitor --setenv=PATH=/run/current-system/sw/bin ${pkgs.bash}/bin/sh -c '"
+              "exec ip monitor rule > /tmp/rule-events'"
+          )
+          homelab.wait_until_succeeds("systemctl is-active rule-monitor.service")
+          homelab.wait_until_succeeds(
+              "ip rule add pref 6000 to 198.18.0.0/15 lookup main && ip rule del pref 6000 to 198.18.0.0/15 lookup main "
+              "&& grep -q 'Deleted 6000:' /tmp/rule-events",
+              timeout=30,
+          )
           homelab.succeed("ip rule add pref 5200 to 192.0.2.0/24 lookup main")
           homelab.succeed("ip -6 rule add pref 5280 to 2001:db8:dead::/48 lookup main")
           for _ in range(5):
               homelab.succeed("systemctl restart egress-policy.service")
               homelab.succeed("systemctl is-active egress-policy.service")
           homelab.succeed("systemctl stop floor-poll.service")
+          time.sleep(1)
+          homelab.succeed("systemctl stop rule-monitor.service")
           status, missing = homelab.execute("cat /tmp/floor-missing 2>/dev/null")
           assert missing.strip() == "", missing
+          events = homelab.succeed("cat /tmp/rule-events")
+          assert "Deleted 6000:" in events, events
+          floor_deletions = [line for line in events.splitlines() if line.startswith("Deleted 5300:")]
+          assert floor_deletions == [], floor_deletions
+          assert any(line.startswith("Deleted 5200:") for line in events.splitlines()), events
           assert_rules_exact("egress-policy restart")
           assert_down_state("after egress-policy restart")
 
