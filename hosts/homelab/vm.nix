@@ -405,7 +405,17 @@ in
               healthy|running|completed) ;;
               *)
                 id=$(containerId "$member")
-                [ -n "$id" ] && docker logs --tail 80 "$id" > "$out/logs-''${member/\//-}.log" 2>&1 || true
+                [ -n "$id" ] || continue
+                log="$out/logs-''${member/\//-}.log"
+                docker logs --tail 80 "$id" > "$log" 2>&1 || true
+                {
+                  echo "user: $(docker inspect --format '{{.Config.User}}' "$id")"
+                  docker inspect --format '{{range .Mounts}}{{.Type}} {{.Source}} {{.Destination}}{{"\n"}}{{end}}' "$id" |
+                    while read -r type source destination; do
+                      [ "$type" = bind ] || continue
+                      echo "bind $destination <- $(stat -c '%u:%g %a %n' "$source" 2>&1)"
+                    done
+                } >> "$log" || true
                 ;;
             esac
           done
