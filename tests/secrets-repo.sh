@@ -108,13 +108,17 @@ for file in secrets/homelab.yaml secrets/vm.yaml; do
   [ -z "$bad_empty" ] || fail "$file leaves keys empty that keys.tsv does not allow: $bad_empty"
 done
 
-history_lines() {
-  git log -p --format= HEAD -- . ':!tests' ':!migration' ':!scripts/tests' ':!docs/decisions'
-}
-history_lines | grep -qE '^\+.*-----BEGIN [A-Z ]*PRIVATE KEY-----' && fail "a PEM private key is in history"
-history_lines | grep -qE '^\+.*hf_[A-Za-z0-9]{30,}' && fail "a Hugging Face token is in history"
+git log -p --format= HEAD -- . ':!tests' ':!migration' ':!scripts/tests' ':!docs/decisions' > "$scratch/history.patch"
+grep -qE '^\+.*-----BEGIN [A-Z ]*PRIVATE KEY-----' "$scratch/history.patch" && fail "a PEM private key is in history"
+grep -qE '^\+.*hf_[A-Za-z0-9]{30,}' "$scratch/history.patch" && fail "a Hugging Face token is in history"
 
-trufflehog git "file://$PWD" --no-update --json --results=verified,unverified,unknown > "$scratch/trufflehog.json" 2> /dev/null
+no_update=(--no-update)
+mkdir "$scratch/empty"
+case $(trufflehog filesystem --no-update --json "$scratch/empty" 2>&1 > /dev/null || true) in
+  *"cannot be repeated"*) no_update=() ;;
+esac
+trufflehog git "file://$PWD" "${no_update[@]}" --json --results=verified,unverified,unknown > "$scratch/trufflehog.json" 2> "$scratch/trufflehog.err" \
+  || fail "trufflehog could not scan the history: $(tail -n 1 "$scratch/trufflehog.err")"
 found=$(jq -c 'select(.SourceMetadata != null) | {d: .DetectorName, f: .SourceMetadata.Data.Git.file, c: .SourceMetadata.Data.Git.commit[0:8]}' "$scratch/trufflehog.json")
 [ -z "$found" ] || fail "trufflehog found secrets in history: $found"
 
