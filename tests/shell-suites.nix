@@ -1,13 +1,14 @@
 { pkgs, self, lib }:
 let
   suites = [
+    "ci-workflow.sh"
     "compose-lint.sh"
     "exposure.sh"
     "gitignore.sh"
     "readme-restore.sh"
   ];
   outsideTheSandbox = [
-    "ci-workflow.sh"
+    "ci-workflow-lint.sh"
     "secrets-age-keys.sh"
     "secrets-repo.sh"
     "secrets-values.sh"
