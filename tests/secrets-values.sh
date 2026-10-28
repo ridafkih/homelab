@@ -34,7 +34,6 @@ else
   fail "hosts/homelab/secrets.nix must set homelab.secrets.sopsFile to ../../secrets/homelab.yaml"
 fi
 
-
 recipient_of() {
   grep -E "^[[:space:]]*- &$1 age1" .sops.yaml | sed -E 's/.*(age1[0-9a-z]+).*/\1/'
 }
