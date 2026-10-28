@@ -68,10 +68,10 @@ All on Arch, while it is still serving. Nothing here is destructive.
 
    Expected: `--fidelity` passes. If `--encrypt` changes `secrets/homelab.yaml`, commit it and push `nixos` before the window. **STOP** on a fidelity failure.
 
-7. **Check the host age key, then put it on the box.** On the admin machine (the one with 1Password access and the sops admin key), `tests/secrets-age-keys.sh <vault>` checks that the `homelab sops host age key` item exists in 1Password and matches the host recipient in `.sops.yaml`, without printing it. Then copy it straight to its path on Arch, where [State](#state) picks it up:
+7. **Check the host age key, then put it on the box.** On the admin machine (the one with 1Password access and the sops admin key), `tests/secrets-age-keys.sh <vault> <token-file> <admin-key-file>` checks that the `homelab sops host age key` item exists in 1Password and matches the host recipient in `.sops.yaml`, without printing it. Then copy it straight to its path on Arch, where [State](#state) picks it up:
 
    ```sh
-   tests/secrets-age-keys.sh '<vault>'
+   tests/secrets-age-keys.sh '<vault>' '<1password service account token file>' '<sops admin age key file>'
    op read 'op://<vault>/homelab sops host age key/<field>' | ssh <box> 'sudo install -d -m 0700 /var/lib/sops-nix && sudo sh -c "umask 077 && cat > /var/lib/sops-nix/key.txt"'
    ```
 

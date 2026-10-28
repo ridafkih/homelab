@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-vault=${1:?usage: secrets-age-keys.sh <1password vault>}
+usage() {
+  echo "usage: secrets-age-keys.sh <1password vault> <1password service account token file> <admin age key file>" >&2
+  exit 2
+}
+[ "$#" -eq 3 ] || usage
+vault=$1
+token_file=$2
+admin_file=$3
+admin_dir=$(dirname "$admin_file")
 
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
@@ -9,15 +17,12 @@ for tool in op jq age-keygen stat; do
   command -v "$tool" > /dev/null || { echo "missing tool: $tool"; exit 1; }
 done
 
-token_file="$HOME/.config/op/service-account-token"
 test -s "$token_file" || { echo "missing 1Password service account token"; exit 1; }
 OP_SERVICE_ACCOUNT_TOKEN=$(< "$token_file")
 export OP_SERVICE_ACCOUNT_TOKEN
 
 host_title="homelab sops host age key"
 admin_title="homelab sops admin age key"
-admin_dir="$HOME/.config/sops/age"
-admin_file="$admin_dir/age.key"
 
 failures=0
 fail() {
@@ -43,8 +48,8 @@ test -d "$admin_dir" || fail "missing $admin_dir"
 test -f "$admin_file" || fail "missing admin key file"
 if test -d "$admin_dir"; then
   [ "$(mode_of "$admin_dir")" = 700 ] || fail "admin key dir must be 0700"
-  others=$(find "$admin_dir" -mindepth 1 ! -path "$admin_file" | wc -l | tr -d ' ')
-  [ "$others" = 0 ] || fail "admin key dir holds $others files besides age.key"
+  others=$(find "$admin_dir" -mindepth 1 ! -name "$(basename "$admin_file")" | wc -l | tr -d ' ')
+  [ "$others" = 0 ] || fail "admin key dir holds $others files besides the admin key file"
 fi
 
 test_recipient=$(age-keygen -y secrets/test-age.key 2>/dev/null || fail "missing or unreadable secrets/test-age.key")
