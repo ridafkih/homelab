@@ -5,6 +5,7 @@ let
     "compose-lint.sh"
     "exposure.sh"
     "gitignore.sh"
+    "pre-push.sh"
     "readme-restore.sh"
   ];
   outsideTheSandbox = [
@@ -32,6 +33,7 @@ pkgs.runCommand "shell-suites"
       pkgs.gitleaks
       pkgs.gnugrep
       pkgs.gnused
+      pkgs.gnutar
       pkgs.jq
     ];
   }
