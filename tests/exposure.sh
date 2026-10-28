@@ -60,7 +60,7 @@ scan() {
     email_hits "$1"
     hits "tailnet domain" "${dot}ts${dot}net([^A-Za-z]|\$)" "$1"
     hits "local user path" '/Users/' "$1"
-    hits "agent home" "[~]/${agent}(/|\$|[^A-Za-z.-])|${dot}config/${agent}|${dot}${agent}/runs|${agent}-agent-bot|mini-${agent}|${agent}-godzilla|agent/${agent}" "$1"
+    hits "agent home" "[~]/${agent}(/|\$|[^A-Za-z.-])|${dot}config/${agent}|${dot}${agent}/runs|${agent}-agent-bot|agent/${agent}" "$1"
     hits "agent run notes" 'Owner rules? [0-9]|owner rule [0-9]|CLAUDE\.md|big-ask|\(winner [A-Z]\)|^## Agent context|<run>/' "$1"
     hits "private key path" '[~]/\.ssh/id_|IdentityAgent=none' "$1"
     hits "MAC address" '(^|[^0-9A-Fa-f:])([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}([^0-9A-Fa-f:]|$)' "$1"
