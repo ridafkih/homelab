@@ -60,10 +60,10 @@ All on Arch, while it is still serving. Nothing here is destructive.
 
    Expected: both repos show a snapshot from a few minutes ago with host `homelab`, and `diff -rq` prints nothing. **STOP** if either repo has no fresh snapshot or the diff shows differences.
 
-6. **Re-encrypt the secrets in case a live value changed.** On the box's build clone (see `docs/build-host.md`), run `scripts/migrate-secrets.sh` the way [0004](decisions/0004-secrets-sops-layout-and-rendered-env-files.md) describes, in this order: `--preflight`, `--fidelity`, `--encrypt`, `--check-leaks`. The script never prints a value, and `--encrypt` streams ciphertext back to the machine that holds the admin key.
+6. **Re-encrypt the secrets in case a live value changed.** On the box's build clone (see [migration/build-host.md](../migration/build-host.md)), run `migration/migrate-secrets.sh` the way [0004](decisions/0004-secrets-sops-layout-and-rendered-env-files.md) describes, in this order: `--preflight`, `--fidelity`, `--encrypt`, `--check-leaks`. The script never prints a value, and `--encrypt` streams ciphertext back to the machine that holds the admin key.
 
    ```sh
-   nix shell --inputs-from . nixpkgs#sops nixpkgs#python3 -c scripts/migrate-secrets.sh --fidelity --env /home/rida/homelab/.env --openseo-env /home/rida/homelab/openseo/.env --restic-pass /root/.config/restic/homelab.pass
+   nix shell --inputs-from . nixpkgs#sops nixpkgs#python3 -c migration/migrate-secrets.sh --fidelity --env /home/rida/homelab/.env --openseo-env /home/rida/homelab/openseo/.env --restic-pass /root/.config/restic/homelab.pass
    ```
 
    Expected: `--fidelity` passes. If `--encrypt` changes `secrets/homelab.yaml`, commit it and push `nixos` before the window. **STOP** on a fidelity failure.
@@ -580,5 +580,14 @@ If Rida wants it: apply the diff, update the port list in `tests/dns-firewall.ni
    ```
 
    This also removes the last copy of the old env files and `HF_TOKEN` outside restic. Rollback is no longer possible after this.
+
+4. **Retire the migration tooling.** `migration/` holds the tools and checks that only make sense before cutover: the Compose diff against the Arch-era tree, the secrets migration and the build-host notes. Once step 3 is done, remove it in one commit on `main`:
+
+   ```sh
+   git rm -r migration
+   git commit -m "Retire the Arch to NixOS migration tooling"
+   ```
+
+   Also drop `"migration"` from the allowed list in `tests/retire-arch.nix` and the migration line from the README's layout block in the same commit.
 
 The window is Rida's to pick, and the runbook waits until he does.

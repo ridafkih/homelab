@@ -131,7 +131,7 @@ for pair in "$adguard:adguard adguard-init" "$webui:open-webui"; do
   file=${pair%%:*}
   diff_out="$scratch/diff.out"
   status=0
-  sh scripts/compose-diff.sh homelab compose.yaml "$file" > "$diff_out" 2>&1 || status=$?
+  sh migration/compose-diff.sh homelab compose.yaml "$file" > "$diff_out" 2>&1 || status=$?
   holds "compose-diff.sh on $file exits 0 or 1 (got $status): $(head -5 "$diff_out")" "[ $status -le 1 ]"
   unexpected=$(sed '/^Services in /,$d' "$diff_out" | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) ' | grep -vE "$allowed_change" || true)
   check "compose-diff.sh on $file shows only pins and path moves" "$unexpected" ""

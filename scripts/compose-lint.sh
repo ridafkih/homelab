@@ -11,7 +11,7 @@ die() {
   exit 2
 }
 
-for tool in docker-compose jq git; do
+for tool in docker-compose jq; do
   command -v "$tool" >/dev/null 2>&1 || die "missing tool: $tool"
 done
 

@@ -111,7 +111,7 @@ expected_json() {
 }
 
 run_script() {
-  (cd "$copy" && TMPDIR="$empty_tmp" bash scripts/migrate-secrets.sh "$@")
+  (cd "$copy" && TMPDIR="$empty_tmp" bash migration/migrate-secrets.sh "$@")
 }
 
 run_mode() {

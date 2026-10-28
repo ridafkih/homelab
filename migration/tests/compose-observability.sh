@@ -254,7 +254,7 @@ lint_status=0
 check "compose-lint.sh on the root and $compose_file: $(cat "$scratch/lint.out")" "$lint_status" 0
 
 diff_status=0
-(cd "$repo" && sh scripts/compose-diff.sh homelab compose.yaml "$compose_file") > "$scratch/diff.out" 2> "$scratch/diff.err" || diff_status=$?
+(cd "$repo" && sh migration/compose-diff.sh homelab compose.yaml "$compose_file") > "$scratch/diff.out" 2> "$scratch/diff.err" || diff_status=$?
 if [ "$diff_status" -le 1 ]; then
   pass
   sed -n '/^Services in /q;p' "$scratch/diff.out" | awk '/^(---|\+\+\+|@@)/ { next } /^[-+]/ { print }' | sed 's/,$//' > "$scratch/diff.lines"

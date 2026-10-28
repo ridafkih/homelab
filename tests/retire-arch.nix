@@ -14,6 +14,7 @@ let
     "flake.nix"
     "homelab.env"
     "hosts"
+    "migration"
     "modules"
     "scripts"
     "secrets"

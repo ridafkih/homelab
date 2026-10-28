@@ -15,7 +15,7 @@ for tool in docker-compose jq; do
   command -v "$tool" >/dev/null 2>&1 || { echo "compose-edge-caddy: missing tool: $tool" >&2; exit 2; }
 done
 
-root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd -P)
+root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd -P)
 caddyfile="$root/apps/caddy/Caddyfile"
 
 failures=0

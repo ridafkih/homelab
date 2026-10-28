@@ -4,8 +4,6 @@ The NixOS configuration in this repository targets an x86_64-linux machine. The 
 
 This setup is temporary. Everything below lives on the Arch install and disappears when the box is reinstalled as NixOS at cutover. Until then the box is live, so the build host is add-only and low priority: it must never disturb a running container or service.
 
-Decision record: [0002, build host and how code reaches it](decisions/0002-build-host-and-checkout-transport.md).
-
 ## Install
 
 Nix is installed in multi-user mode with the Determinate installer (nix-installer 3.24.1), asking for upstream Nix rather than the Determinate distribution. The binary is downloaded to a fresh directory and run directly, not piped into a shell, and every setting is passed as its own `--extra-conf` so the daemon never starts unconfigured:
@@ -117,7 +115,7 @@ ssh <build-host> "nix config show | grep -E '^(max-jobs|cores|system-features|ex
 
 `nix --version` prints `nix (Nix) <version>`, hello prints `Hello, world!`, and the daemon shows `Nice=19`, `IOSchedulingClass=3`, `CPUSchedulingPolicy=3`, `MemoryHigh=17179869184` and `MemoryMax=25769803776`.
 
-`scripts/tests/build-host-live.sh <evidence-dir> ssh <build-host>` repeats these checks and compares running containers, services, network state and the `~/homelab` checkout against the snapshots taken before the install. `scripts/tests/build-host-doc.sh` checks this document.
+`migration/tests/build-host-live.sh <evidence-dir> ssh <build-host>` repeats these checks and compares running containers, services, network state and the `~/homelab` checkout against the snapshots taken before the install. `migration/tests/build-host-doc.sh` checks this document.
 
 ## Uninstall
 
