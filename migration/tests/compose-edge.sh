@@ -12,7 +12,7 @@ root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd -P)
 cd "$root" || exit 2
 git cat-file -e "$baseline^{commit}" 2>/dev/null || { echo "compose-edge: baseline $baseline is not in $root" >&2; exit 2; }
 
-scratch=$(CDPATH='' cd -- "$(mktemp -d "${TMPDIR:-/tmp}/compose-edge.XXXXXX")" && pwd -P)
+scratch=$(CDPATH='' cd -- "$(mktemp -d -t compose-edge.XXXXXX)" && pwd -P)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 
 export DOCKER_HOST=unix:///nonexistent

@@ -35,7 +35,7 @@ keys="$root/secrets/keys.tsv"
 new_file=$(CDPATH='' cd -- "$(dirname -- "$new_file")" && pwd -P)/$(basename -- "$new_file")
 git -C "$root" cat-file -e "$baseline^{commit}" 2>/dev/null || die "baseline $baseline is not in $root"
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/compose-diff.XXXXXX")
+scratch=$(mktemp -d -t compose-diff.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 scratch_physical=$(CDPATH='' cd -- "$scratch" && pwd -P)
 

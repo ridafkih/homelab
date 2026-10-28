@@ -19,7 +19,7 @@ root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd -P)
 keys="$root/secrets/keys.tsv"
 [ -f "$keys" ] || die "missing key table $keys"
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/compose-lint.XXXXXX")
+scratch=$(mktemp -d -t compose-lint.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 
 allowed="$scratch/allowed.tsv"

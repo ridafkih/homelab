@@ -6,7 +6,7 @@ cd "$root" || exit 2
 
 cutover=docs/cutover.md
 hardware=docs/hardware.md
-failure_log=$(mktemp "${TMPDIR:-/tmp}/cutover-docs.XXXXXX")
+failure_log=$(mktemp -t cutover-docs.XXXXXX)
 trap 'rm -f "$failure_log"' EXIT
 
 fail() {

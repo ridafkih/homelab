@@ -7,8 +7,10 @@ usage() {
 }
 
 [ $# -le 2 ] || usage
-inspect=${1:-}
-repo_digests=${2:-}
+inspect=""
+repo_digests=""
+[ $# -lt 1 ] || inspect=$1
+[ $# -lt 2 ] || repo_digests=$2
 
 for tool in docker-compose jq git; do
   command -v "$tool" >/dev/null 2>&1 || { echo "missing tool: $tool"; exit 2; }
@@ -20,7 +22,7 @@ digest=sha256:3633f055f31aadf76bb650b1ca86897ab45b76ad8eb2cf81e86389ace5eb45ac
 image="dockurr/windows:latest@$digest"
 image_defaults='{"PATH":"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","RAM_SIZE":"4G","CPU_CORES":"2","DISK_SIZE":"64G"}'
 
-scratch=$(mktemp -d "${TMPDIR:-/tmp}/windows-tests.XXXXXX")
+scratch=$(mktemp -d -t windows-tests.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT INT TERM
 
 export DOCKER_HOST="unix://$scratch/no-docker-daemon.sock"

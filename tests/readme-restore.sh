@@ -6,7 +6,7 @@ cd "$root" || exit 2
 
 readme=README.md
 restore=docs/restore.md
-failure_log=$(mktemp "${TMPDIR:-/tmp}/readme-restore.XXXXXX")
+failure_log=$(mktemp -t readme-restore.XXXXXX)
 trap 'rm -f "$failure_log"' EXIT
 
 fail() {
