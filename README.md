@@ -1,201 +1,97 @@
 # Homelab
 
-Configuration files and dockerized container configurations for the services I run on my own home lab.
+The NixOS configuration and Docker Compose apps for my home server, `homelab`.
 
-## Considerations
+## Hardware
 
-This exact configuration requires an NVIDIA GPU, but modification of the [compose.yaml](./compose.yaml) can remove that requirement by removing references to the NVIDIA runtime.
+A Ryzen 7 7800X3D with 64 GB of RAM and an RTX 4080 Super, used headless for Jellyfin transcodes. NixOS runs from a 2 TB NVMe. Two hard drives (12 TB and 16 TB) are pooled at `/data` with mergerfs. Details, disk IDs and the USB port rule are in [docs/hardware.md](./docs/hardware.md).
 
-## Services
+## What runs
 
-### Network
+NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups and the egress policy. Everything else is a Docker Compose app under `apps/`:
 
-#### Tailscale
+- `caddy`: reverse proxy and TLS for the `rida.sh` subdomains, with Cloudflare DNS challenges
+- `authentik`: single sign-on, reached from outside through its own Cloudflare tunnel
+- `adguard`: DNS for the box and the tailnet
+- `jellyfin`: media server, with NVENC on the 4080
+- `media`: Prowlarr, Sonarr, Radarr, Bazarr, qBittorrent, qui and Jellyseerr
+- `seafile`: file sync and sharing, with SeaDoc
+- `open-webui`: Open WebUI
+- `observability`: OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana and SigNoz, with a Tailscale Funnel for OTLP
+- `ridash`: the Cloudflare tunnel for `rida.sh`
+- `openseo`: OpenSEO, as its own Compose project
+- `windows`: a Windows 11 VM, as its own Compose project
 
-Tailscale is an easy-to-use VPN configuration, allowing you to securely access your home lab, or any other system on your "tailnet" anywhere without requiring you to expose it to the internet. This simplifies both configuration, as well as the security posture of your configuration significantly.
+## Layout
 
-#### Caddy
+```text
+flake.nix          the flake; nixosConfigurations.homelab and the checks
+flake.lock         pinned nixpkgs, sops-nix and disko
+hosts/homelab/     the host: hardware, disko layout, secrets wiring, the test VM
+modules/           one NixOS module per concern (backup, egress, storage, DNS, ...)
+apps/              one directory per Compose app, plus its config files
+compose.yaml       the homelab project, which includes the apps under apps/
+homelab.env        non-secret settings shared by the Compose apps
+secrets/           sops-encrypted secrets and the map from secrets to env files
+scripts/           Compose lint and diff, the VM smoke run, the secrets migration
+tests/             NixOS VM tests, eval checks and doc checks
+docs/              hardware, restore, cutover, build host and decision records
+.github/           CI: evaluates the flake and builds the host
+```
 
-Caddy is a reverse-proxy, similar to Nginx without the regular pains of managing an Nginx instance. Caddy easily and automatically configures your certificates and easily routes to services within your Docker network.
+## Deploy
 
-#### Pi-hole
-
-Pi-hole is an easily-configurable DNS server that can be used to block or modify DNS requests. It's very useful for network-level analytics & ad-blocking.
-
-### Media
-
-#### Jellyfin
-
-Jellyfin is a great alternative to other popular options, like Plex. It hosts media, doing all the heavy-lifting for serving content to various clients.
-
-As far as clients go, I'd highly recommend [Jellyfin's official companion application for Android](https://play.google.com/store/apps/details?id=org.jellyfin.mobile&hl=en_CA&pli=1) or your Android-compatible television, or the [Streamyfin application on the Apple App Store](https://apps.apple.com/us/app/streamyfin/id6593660679). They are both very well made, and work flawlessly.
-
-### Files
-
-#### Seafile
-
-Seafile is a self-hosted file sync & share server - the closest open-source equivalent to Google Drive. It replaces the previous Samba/NAS setup with something reachable from outside the tailnet, with share links, user accounts and desktop/mobile sync clients.
-
-It is a good fit for large media files specifically: Seafile splits files into content-addressed blocks and only transfers the blocks that changed, so re-uploading a re-exported render only ships the delta rather than the whole file.
-
-Note that Seafile stores data in its own block format under `SEAFILE_DATA_PATH`, not as plain files on disk. Files in a Seafile library are not directly readable by Jellyfin or the *arr stack, and recovering them without a working Seafile install means using Seafile's own export tooling. Libraries you want Jellyfin to serve should be exported to `/data/media` rather than shared out of Seafile.
-
-SeaDoc, Seafile's collaborative document editor, is enabled and served under `/sdoc-server` on the same hostname.
-
-### Artificial Intelligence
-
-#### Ollama
-
-Ollama is an easy-to-use OpenAI API compatible server that can be used to easily mount and serve compatible models to services and clients that have access to your homelab.
-
-#### Open WebUI
-
-Open WebUI is an extensible, and well-crafted UI that is compatible with both Ollama & OpenAI API compatible services. It's great for quickly accessing and interacting with the models you have installed on Ollama.
-
-## Prerequisites
-
-First, start by copying the `.env.example` to a `.env` file in the root directory and configuring it as you wish.
+On the box, from the checkout:
 
 ```bash
-cp .env.example .env
+sudo nixos-rebuild switch --flake .#homelab
 ```
 
-### Configuring Docker
-
-You can follow Docker's official [installation documentation](https://docs.docker.com/desktop/setup/install/linux/) to get started with installing it. It is vital to this project, which hosts all the services it can inside containers.
-
-### Configuring Tailscale
-
-Tailscale is used to access the home lab remotely, and is baked into this project to serve the DNS resolver to avoid conflicting with the configuration of the host. With that said, you should follow [their official documentation](https://tailscale.com/kb/1031/install-linux) to get started on installing it for your Linux distro.
-
-### Preparing for Jellyfin
-
-The media server mounts a hard-coded directory, where it will be used to access files. Before running Jellyfin, you should mount a directory you plan on storing your media to /data/media/.
-
-### Preparing for Seafile
-
-Seafile needs a storage location, a few secrets, and an initial admin account. Set these in your `.env`.
-
-`SEAFILE_DATA_PATH` is where the block store lives, and is where the bulk of your data will end up. It defaults to `/data/seafile` on the mergerfs pool.
-
-The secrets can be generated with:
+Each Compose project runs as a systemd unit: `homelab-compose` (everything in `compose.yaml`), `openseo-compose` and `windows-compose`. A switch reloads a unit when its secrets change. To pick up a Compose change or restart one app:
 
 ```bash
-# JWT signing key - must be at least 32 characters
-openssl rand -base64 32
-
-# Database and cache passwords
-openssl rand -base64 24
+sudo systemctl reload homelab-compose
+sudo docker restart jellyfin
+journalctl -u homelab-compose
 ```
 
-```
-SEAFILE_DATA_PATH=/data/seafile
-SEAFILE_ADMIN_EMAIL=you@example.net
-SEAFILE_ADMIN_PASSWORD=********
-SEAFILE_JWT_PRIVATE_KEY=********************************
-SEAFILE_MYSQL_ROOT_PASSWORD=********
-SEAFILE_MYSQL_PASSWORD=********
-SEAFILE_REDIS_PASSWORD=********
-```
+Images are pinned by digest. `nix flake check` runs the tests; [docs/build-host.md](./docs/build-host.md) covers building and the VM smoke run.
 
-The admin email and password are only read on first startup, when the database is initialised. Changing them later has no effect - use the web UI instead.
+## Secrets
 
-
-### Preparing for Caddy
-
-#### Cloudflare
-
-Use Cloudflare to manage your DNS, this will allow Caddy to automatically manage your ACME TXT records and the DNS-01 challenge.
-
-Once you've configured Cloudflare to manage your DNS.
-
-1. Click on the Profile icon on the top-right of the Cloudflare dashboard.
-2. Click "API Tokens" on the sidebar.
-3. Click "Create Token"
-4. Under "Permissions" configure the token to be able to read zone information, and edit DNS information.
-   1. Zone, Zone, Read
-   2. Zone, DNS, Edit
-5. Under "Zone Resource" configure the token to be able to access your domain settings.
-   1. Include, Specific zone, example.net
-6. Save your token, and use it for the `CADDY_CLOUDFLARE_API_TOKEN`.
-
-Use the domain of your choice, and in your registrar's DNS settings, configure a single wildcard `A` record under the domain, or subdomain of your choice - pointing to the local (IPv4) address of the home lab on your tailnet. This is the same domain that will be used to access your services.
-
-As an example, if you wanted to serve your home lab to the domain name `example.net`, you would configure your environment variable.
-
-```
-CADDY_CLOUDFLARE_API_TOKEN=********************************
-CADDY_DOMAIN=example.net
-```
-
-#### DNS Settings
-
-Once that's done, configure your domain, or a subdomain of your choice to serve the local IP address of your server on your Tailscale network.
-
-```
-Type        Name        Content            Proxy        TTL
-A           *           100.xxx.xxx.92     DNS only     Auto
-```
-
-With all said and done, Caddy will be able to automatically add the ACME TXT records, and manage TLS for the services. You can access the services under the subdomains of your `CADDY_DOMAIN`.
-
-- pihole.example.net
-- jellyfin.example.net
-- ollama.example.net
-- open-webui.example.net
-- seafile.example.net
-
-These can be configured in [the Caddyfile](./config/Caddyfile)
-
-## Usage
+Secrets live in `secrets/homelab.yaml`, encrypted with sops to two age keys: the host's (`/var/lib/sops-nix/key.txt` on the box) and an admin key. Both private keys are kept in 1Password. Nothing secret is ever committed in plaintext. sops-nix decrypts them at boot, and `secrets/keys.tsv` says which env file under `/run/secrets/rendered` each one lands in. To edit:
 
 ```bash
-# Start all services
-make up
-
-# Start specific profiles
-docker compose --profile network up -d
-docker compose --profile media up -d
-docker compose --profile ai up -d
-
-# Stop all services
-make down
+sops secrets/homelab.yaml
 ```
 
-## Getting Started
+`secrets/vm.yaml` and `secrets/test-age.key` are throwaway values for the test VM.
 
-Once you've configured everything, you can run the services.
+## Backups
 
-```bash
-make up
-```
+Backups are on-disk only, with restic, every night at 03:30. There is no off-site copy for now. The two repos are crossed, so each disk's Seafile half is backed up onto the other disk:
 
-You can stop services just as easily.
+- `/mnt/disk2/backup/restic` holds disk1's Seafile half
+- `/mnt/disk1/backup/restic` holds disk2's Seafile half
 
-```bash
-make down
-```
+Both also hold `/etc`, `/root`, the checkout and its app data, Tailscale's state, a few Docker volumes and nightly dumps of the Authentik, Seafile and OpenSEO databases. The media library (`/data/media`) is never backed up: if it goes, it goes. The Windows VM disk is excluded too.
 
-Use the Docker CLI to find containers, and access logs if containers don't work as expected.
+Restoring files, Seafile and the databases is in [docs/restore.md](./docs/restore.md).
 
-```
-docker ps
-docker logs ollama
-```
+## Egress
 
-## Specifications
+The whole box, host and containers, goes out through Mullvad via a Tailscale exit node. The egress policy is a kill switch: if Tailscale or the exit node is down, traffic fails closed instead of leaking to the ISP. LAN and Docker traffic stay local.
 
-This is run on a system with the following specifications.
+There is one exception: the two Cloudflare tunnels (Authentik and `rida.sh`) connect straight to Cloudflare's tunnel edge, because Cloudflare refuses tunnel connections from Mullvad's relays. Only Cloudflare's published tunnel-edge prefixes skip Mullvad, and Cloudflare already knows the box from the tunnel tokens. See [0008](./docs/decisions/0008-whole-box-mullvad-egress.md).
 
-- AMD AM5 Ryzen 7 7800X3D
-- 64GB DDR5 RAM
-- GeForce RTX 3090 Founders Edition
-- Arch Linux
+## Not carried over
 
-## Contributions
+Pi-hole, Ollama and Keeper.sh no longer run here. The rest of what was left behind is listed in [docs/hardware.md](./docs/hardware.md#not-carried-over).
 
-Unlikely, but feel free to contribute issues if you have questions or want any support in spinning a similar configuration up yourself - I'll be happy to assist.
+## Moving the box over
 
-## LICENSE
+[docs/cutover.md](./docs/cutover.md) is the runbook for installing this config on the box, and for rolling back.
 
-MIT License
+## License
+
+[MIT](./LICENSE)
