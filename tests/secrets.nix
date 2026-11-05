@@ -31,6 +31,14 @@ let
     [ "seafile.env" "SEAFILE_MYSQL_DB_PASSWORD" "seafile/SEAFILE_MYSQL_PASSWORD" "deny" ]
     [ "signoz.env" "SIGNOZ_TOKENIZER_JWT_SECRET" "signoz/SIGNOZ_JWT_SECRET" "deny" ]
     [ "tailscale-funnel.env" "TS_AUTHKEY" "tailscale-funnel/TS_AUTHKEY" "deny" ]
+    [ "open-webui.env" "OAUTH_CLIENT_SECRET" "pocket-id/CLIENT_SECRET_OPEN_WEBUI" "deny" ]
+    [ "qui.env" "QUI__OIDC_CLIENT_SECRET" "pocket-id/CLIENT_SECRET_QUI" "deny" ]
+    [ "seafile.env" "SEAFILE_OAUTH_CLIENT_SECRET" "pocket-id/CLIENT_SECRET_SEAFILE" "deny" ]
+    [ "-" "-" "pocket-id/CLIENT_SECRET_JELLYFIN" "deny" ]
+    [ "-" "-" "pocket-id/CLIENT_SECRET_TAILSCALE" "deny" ]
+    [ "-" "-" "pocket-id/CLIENT_SECRET_TINYAUTH" "deny" ]
+    [ "-" "-" "pocket-id/ENCRYPTION_KEY" "deny" ]
+    [ "-" "-" "pocket-id/STATIC_API_KEY" "deny" ]
     [ "-" "-" "restic/RESTIC_PASSWORD" "deny" ]
   ];
 
