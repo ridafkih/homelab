@@ -7,7 +7,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./:/etc/caddy:ro
       - ${HOMELAB_DATA_DIR:?}/caddy/srv:/srv
       - ${HOMELAB_DATA_DIR:?}/caddy/data:/data
       - ${HOMELAB_DATA_DIR:?}/caddy/config:/config

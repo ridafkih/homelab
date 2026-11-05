@@ -15,6 +15,7 @@ The apps stay on Docker Compose. NixOS needs units that start the three projects
 - A change to a rendered env file reloads the project that reads it. A CA bundle change restarts `homelab-compose`.
 - `homelab.compose.extraFiles` and `homelab.compose.services` let tests and the test VM layer override files and limit the services; production sets neither.
 - A tmpfiles rule creates `.data`, `jellyfin/{config,cache}` and `jellyseerr/config` under it, owned by the user. Jellyfin and Jellyseerr run as uid 1000, and Docker would otherwise create a missing bind source as root and leave them crash-looping on a fresh box.
+- Caddy mounts `apps/caddy` as a directory, so a `git pull` that replaces the Caddyfile is visible inside the container, and `caddy-reload` (restarted by a switch whenever the Caddyfile's content changes) runs `caddy reload` without dropping connections.
 
 ## Consequences
 

@@ -128,6 +128,23 @@ in
       (lib.mapAttrs' (name: project: lib.nameValuePair "${name}-compose" (mkComposeUnit name project)) projects)
       {
         homelab-compose.restartTriggers = [ config.homelab.trust.bundleSource ];
+        caddy-reload = {
+          description = "Reload Caddy when the Caddyfile changes";
+          after = [ (unitOf "homelab") ];
+          requires = [ (unitOf "homelab") ];
+          wantedBy = [ "multi-user.target" ];
+          restartTriggers = [ ../apps/caddy/Caddyfile ];
+          path = [ docker ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = pkgs.writeShellScript "caddy-reload" ''
+              if [ "$(docker inspect -f '{{.State.Running}}' caddy 2>/dev/null)" = true ]; then
+                exec docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+              fi
+            '';
+          };
+        };
         openseo-compose = {
           after = [ (unitOf "homelab") ];
           requires = [ (unitOf "homelab") ];
