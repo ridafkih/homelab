@@ -38,6 +38,7 @@ services:
     restart: unless-stopped
     volumes:
       - ${SEAFILE_DATA_PATH:?}:/shared
+      - ./seahub_oauth_settings.py:/shared/seafile/conf/seahub_oauth_settings.py:ro
     env_file: ${HOMELAB_SECRETS_DIR:?}/seafile.env
     environment:
       SEAFILE_MYSQL_DB_HOST: seafile-db
@@ -49,6 +50,7 @@ services:
       TIME_ZONE: America/Toronto
       SEAFILE_SERVER_HOSTNAME: seafile.${CADDY_DOMAIN:?}
       SEAFILE_SERVER_PROTOCOL: https
+      SEAFILE_OAUTH_PROVIDER_URL: https://id.${CADDY_DOMAIN:?}
       SITE_ROOT: /
       NON_ROOT: false
       SEAFILE_LOG_TO_STDOUT: false
