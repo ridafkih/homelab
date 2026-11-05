@@ -81,10 +81,7 @@
     
     @sonarr host sonarr.{env.DOMAIN}
     handle @sonarr {
-        @sonarr_api {
-            path /api/* /feed/*
-            header X-Api-Key *
-        }
+        @sonarr_api expression `path('/api/*', '/feed/*', '/signalr/*') && ({http.request.header.X-Api-Key} != "" || {http.request.uri.query.apikey} != "" || {http.request.uri.query.access_token} != "")`
         handle @sonarr_api {
             reverse_proxy sonarr:8989
         }
@@ -97,10 +94,7 @@
     
     @radarr host radarr.{env.DOMAIN}
     handle @radarr {
-        @radarr_api {
-            path /api/* /feed/*
-            header X-Api-Key *
-        }
+        @radarr_api expression `path('/api/*', '/feed/*', '/signalr/*') && ({http.request.header.X-Api-Key} != "" || {http.request.uri.query.apikey} != "" || {http.request.uri.query.access_token} != "")`
         handle @radarr_api {
             reverse_proxy radarr:7878
         }
