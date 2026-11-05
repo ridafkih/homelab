@@ -3,7 +3,7 @@ name: fixture-fallback
 services:
   colon-dash:
     image: docker.io/library/busybox:1.37.0@sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
-    command: ["--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}"]
+    command: ["--storage.tsdb.retention.time=${CADDY_DOMAIN:-rida.sh}"]
   dash:
     image: docker.io/library/busybox:1.37.0@sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
     environment:

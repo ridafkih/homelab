@@ -15,62 +15,7 @@ services:
     networks:
       - homelab-network
 
-  tempo:
-    image: grafana/tempo:2.6.1@sha256:ef4384fce6e8ad22b95b243d8fc165628cda655376fd50e7850536ad89d71d50
-    container_name: tempo
-    restart: unless-stopped
-    command: ["-config.file", "/etc/tempo/tempo.yaml"]
-    volumes:
-      - ./config/tempo.yaml:/etc/tempo/tempo.yaml:ro
-      - tempo:/var/tempo
-    networks:
-      - homelab-network
-
-  prometheus:
-    image: prom/prometheus:latest@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
-    container_name: prometheus
-    restart: unless-stopped
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:?}"
-      - "--web.enable-remote-write-receiver"
-      - "--web.enable-lifecycle"
-    volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus:/prometheus
-    networks:
-      - homelab-network
-
-  loki:
-    image: grafana/loki:latest@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
-    container_name: loki
-    restart: unless-stopped
-    command: ["-config.file", "/etc/loki/loki.yaml"]
-    volumes:
-      - ./config/loki.yaml:/etc/loki/loki.yaml:ro
-      - loki:/loki
-    networks:
-      - homelab-network
-
-  grafana:
-    image: grafana/grafana:latest@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
-    container_name: grafana
-    restart: unless-stopped
-    env_file: ${HOMELAB_SECRETS_DIR:?}/grafana.env
-    environment:
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
-      - grafana:/var/lib/grafana
-    depends_on:
-      - tempo
-      - prometheus
-      - loki
-    networks:
-      - homelab-network
-
-  grafana-funnel:
+  otel-funnel:
     image: tailscale/tailscale:latest@sha256:b11583ad2e93e4671128538c88cf11f460444a5d7e449311dd1933a400ab849d
     container_name: tailscale-funnel
     restart: unless-stopped
@@ -246,14 +191,6 @@ services:
       - homelab-network
 
 volumes:
-  tempo:
-    driver: local
-  prometheus:
-    driver: local
-  loki:
-    driver: local
-  grafana:
-    driver: local
   grafana-funnel:
     driver: local
   signoz-clickhouse:

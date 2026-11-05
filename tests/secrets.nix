@@ -12,8 +12,6 @@ let
     [ "authentik.env" "POSTGRES_PASSWORD" "authentik/AUTHENTIK_POSTGRESQL__PASSWORD" "deny" ]
     [ "authentik.env" "POSTGRES_USER" "authentik/AUTHENTIK_POSTGRESQL__USER" "deny" ]
     [ "caddy.env" "CLOUDFLARE_API_TOKEN" "caddy/CADDY_CLOUDFLARE_API_TOKEN" "deny" ]
-    [ "grafana.env" "GF_SECURITY_ADMIN_PASSWORD" "grafana/GRAFANA_ADMIN_PASSWORD" "deny" ]
-    [ "grafana.env" "GF_SECURITY_ADMIN_USER" "grafana/GRAFANA_ADMIN_USER" "deny" ]
     [ "openseo.env" "CONTEXT_API_KEY" "openseo/CONTEXT_API_KEY" "allow" ]
     [ "openseo.env" "DATAFORSEO_API_KEY" "openseo/DATAFORSEO_API_KEY" "deny" ]
     [ "openseo.env" "GOOGLE_CLIENT_ID" "openseo/GOOGLE_CLIENT_ID" "deny" ]

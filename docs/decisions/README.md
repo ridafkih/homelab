@@ -19,3 +19,4 @@ Short records of the choices behind this configuration: what was decided, why, a
 | [0013](0013-public-repo.md) | What may be public in this repo |
 | [0014](0014-cutover.md) | Cutover from Arch |
 | [0015](0015-rpfilter-and-the-egress-floor.md) | Reverse-path filtering and the egress floor |
+| [0016](0016-signoz-only-observability.md) | SigNoz is the only observability backend |

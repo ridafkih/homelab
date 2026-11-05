@@ -137,12 +137,12 @@ systemctl start openseo-compose
 
 ## Docker volumes
 
-Only four volumes are backed up as files: `homelab_grafana`, `homelab_grafana-funnel`, `homelab_signoz-sqlite` and `grafana_grafana-data`. The database volumes come back from the dumps above. Stop whatever uses the volume, restore it in place and start it again:
+Only four volumes are backed up as files: `homelab_signoz-sqlite` (SigNoz users, dashboards, alerts and keys), `homelab_grafana-funnel` (the OTLP funnel's Tailscale identity), and `homelab_grafana` and `grafana_grafana-data`, left from the retired Grafana. The database volumes come back from the dumps above. Stop whatever uses the volume, restore it in place and start it again:
 
 ```bash
-docker stop grafana
-restic-disk1 restore latest --target / --include /var/lib/docker/volumes/homelab_grafana
-docker start grafana
+docker stop signoz
+restic-disk1 restore latest --target / --include /var/lib/docker/volumes/homelab_signoz-sqlite
+docker start signoz
 ```
 
 ## Tailscale

@@ -22,7 +22,7 @@ tier=$1
 case "$1" in
   core) boots=core ;;
   media) boots=media ;;
-  obs) boots="obs-signoz obs-grafana" ;;
+  obs) boots=obs-signoz ;;
   *) usage ;;
 esac
 case "$down" in

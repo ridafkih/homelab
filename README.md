@@ -17,7 +17,7 @@ NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups 
 - `media`: Prowlarr, Sonarr, Radarr, Bazarr, qBittorrent, qui and Jellyseerr
 - `seafile`: file sync and sharing, with SeaDoc
 - `open-webui`: Open WebUI
-- `observability`: OpenTelemetry Collector, Prometheus, Loki, Tempo, Grafana and SigNoz, with a Tailscale Funnel for OTLP
+- `observability`: SigNoz, fed by an OpenTelemetry Collector behind a Tailscale Funnel for OTLP
 - `ridash`: the Cloudflare tunnel for `rida.sh`
 - `openseo`: OpenSEO, as its own Compose project
 - `windows`: a Windows 11 VM, as its own Compose project

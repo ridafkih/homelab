@@ -13,7 +13,7 @@ cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
 production=secrets/homelab.yaml
 table=secrets/keys.tsv
-non_credential_names='adguard/ADGUARD_USER authentik/AUTHENTIK_POSTGRESQL__USER grafana/GRAFANA_ADMIN_USER openseo/STORAGE_ACCESS_KEY'
+non_credential_names='adguard/ADGUARD_USER authentik/AUTHENTIK_POSTGRESQL__USER openseo/STORAGE_ACCESS_KEY'
 
 ran=0
 failures=0

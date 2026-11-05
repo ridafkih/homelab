@@ -134,8 +134,7 @@ let
         'StartedAt' \
         'ss -ltn' \
         'system.build.vm' \
-        'obs-signoz' \
-        'obs-grafana'
+        'obs-signoz'
       do
         grep -qF -- "$needle" "$script" || { echo "vm-smoke.sh does not mention: $needle"; exit 1; }
       done
