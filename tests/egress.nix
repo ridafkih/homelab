@@ -77,6 +77,7 @@ let
     egressBeforeNetworkPre = builtins.elem "network-pre.target" (svc.before or [ ]);
     egressBeforeTailscaled = builtins.elem "tailscaled.service" (svc.before or [ ]);
     egressBeforeDocker = builtins.elem "docker.service" (svc.before or [ ]);
+    rpfilterPassesEstablishedReplies = modulesPresent && lib.hasInfix "ip46tables -t mangle -I nixos-fw-rpfilter 1 -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN" cfg.networking.firewall.extraCommands;
     egressNotTiedToTailscaled = modulesPresent && !(builtins.any mentionsTailscaled [ "after" "requires" "bindsTo" "partOf" "requisite" "upholds" ]);
     egressNoExecStop =
       modulesPresent
