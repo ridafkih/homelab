@@ -1,6 +1,6 @@
 { ... }:
 let
-  seagate = "-o on -S on -W 4,50,60";
+  seagate = "-d sat -o on -S on -W 4,50,60";
 in
 {
   services.smartd = {

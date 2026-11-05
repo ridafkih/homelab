@@ -16,11 +16,11 @@ let
   aaaSha256 = "D7:A7:A0:FB:5D:7E:27:31:D7:71:E9:48:4E:BC:DE:F7:1D:5F:0C:3E:0A:29:48:78:2B:C8:3E:E0:EA:69:9E:F4";
 
   defaultSchedule = "-a -n standby,q -s (S/../.././02|L/../01/./03)";
-  archSmartdLines = [
+  smartdLines = [
     "DEFAULT ${defaultSchedule}"
-    "/dev/disk/by-id/ata-ST12000VN0008-2YS101_ZRT2GJKS -o on -S on -W 4,50,60"
-    "/dev/disk/by-id/ata-ST16000NT001-3LV101_ZRS26FDA -o on -S on -W 4,50,60"
-    "/dev/disk/by-id/ata-ST2000DM006-2DM164_Z4Z9LD0N -o on -S on -W 4,50,60"
+    "/dev/disk/by-id/ata-ST12000VN0008-2YS101_ZRT2GJKS -d sat -o on -S on -W 4,50,60"
+    "/dev/disk/by-id/ata-ST16000NT001-3LV101_ZRS26FDA -d sat -o on -S on -W 4,50,60"
+    "/dev/disk/by-id/ata-ST2000DM006-2DM164_Z4Z9LD0N -d sat -o on -S on -W 4,50,60"
     "/dev/disk/by-id/nvme-WD_BLACK_SN850X_2000GB_23523B800268 -d nvme -W 4,75,82"
   ];
 
@@ -46,7 +46,7 @@ let
     smartdEnabled = smartd.enable;
     smartdNoAutodetect = !smartd.autodetect;
     smartdDefaultSchedule = smartd.defaults.monitored == defaultSchedule;
-    smartdDevices = map (d: "${d.device} ${d.options}") smartd.devices == lib.drop 1 archSmartdLines;
+    smartdDevices = map (d: "${d.device} ${d.options}") smartd.devices == lib.drop 1 smartdLines;
     smartdNotifiersOff = !notifiers.mail.enable && !notifiers.wall.enable && !notifiers.x11.enable && !notifiers.test;
     productionKeepsDefaultQuitPolicy = !(builtins.elem "never" smartd.extraOptions);
 
@@ -133,7 +133,7 @@ let
       services.smartd.extraOptions = [ "-q" "never" ];
     };
     testScript = ''
-      expected = ${builtins.toJSON archSmartdLines}
+      expected = ${builtins.toJSON smartdLines}
 
       machine.wait_for_unit("multi-user.target")
       machine.wait_for_unit("smartd.service")
