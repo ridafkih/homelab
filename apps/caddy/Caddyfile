@@ -29,7 +29,18 @@
 
     @jellyseerr host jellyseerr.{env.DOMAIN}
     handle @jellyseerr {
-        reverse_proxy jellyseerr:5055
+        @jellyseerr_api {
+            path /api/v1/*
+            header X-Api-Key *
+        }
+        handle @jellyseerr_api {
+            reverse_proxy jellyseerr:5055
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy jellyseerr:5055
+        }
     }
     
     @openwebui host open-webui.{env.DOMAIN}
@@ -39,7 +50,10 @@
     
     @adguard host adguard.{env.DOMAIN}
     handle @adguard {
-        reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3000
+        handle {
+            import tinyauth
+            reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3000
+        }
     }
     
     @pocketid host id.{env.DOMAIN}
@@ -59,27 +73,58 @@
     
     @prowlarr host prowlarr.{env.DOMAIN}
     handle @prowlarr {
-        reverse_proxy prowlarr:9696
+        handle {
+            import tinyauth
+            reverse_proxy prowlarr:9696
+        }
     }
     
     @sonarr host sonarr.{env.DOMAIN}
     handle @sonarr {
-        reverse_proxy sonarr:8989
+        @sonarr_api {
+            path /api/* /feed/*
+            header X-Api-Key *
+        }
+        handle @sonarr_api {
+            reverse_proxy sonarr:8989
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy sonarr:8989
+        }
     }
     
     @radarr host radarr.{env.DOMAIN}
     handle @radarr {
-        reverse_proxy radarr:7878
+        @radarr_api {
+            path /api/* /feed/*
+            header X-Api-Key *
+        }
+        handle @radarr_api {
+            reverse_proxy radarr:7878
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy radarr:7878
+        }
     }
     
     @bazarr host bazarr.{env.DOMAIN}
     handle @bazarr {
-        reverse_proxy bazarr:6767
+        handle {
+            import tinyauth
+            reverse_proxy bazarr:6767
+        }
     }
     
     @qbittorrent host qbittorrent.{env.DOMAIN}
     handle @qbittorrent {
-        reverse_proxy qbittorrent:8080
+        handle {
+            import tinyauth
+            reverse_proxy qbittorrent:8080
+        }
     }
 
     @qui host qui.{env.DOMAIN}
@@ -106,14 +151,45 @@
 
     @signoz host signoz.{env.DOMAIN}
     handle @signoz {
-        reverse_proxy signoz:8080
+        @signoz_api {
+            path /api/*
+            header SIGNOZ-API-KEY *
+        }
+        handle @signoz_api {
+            reverse_proxy signoz:8080
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy signoz:8080
+        }
     }
 
     @openseo host open-seo.{env.DOMAIN}
     handle @openseo {
         @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48 172.19.0.1 172.20.0.1
         abort @outside_tailnet
-        reverse_proxy open-seo:80
+
+        @openseo_mcp {
+            path /mcp /mcp/*
+            remote_ip 100.76.193.51
+        }
+        handle @openseo_mcp {
+            reverse_proxy open-seo:80
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy open-seo:80
+        }
+    }
+
+    @windows host windows.{env.DOMAIN}
+    handle @windows {
+        handle {
+            import tinyauth
+            reverse_proxy {env.HOST_MACHINE_HOSTNAME}:8006
+        }
     }
 }
 
