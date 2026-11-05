@@ -39,19 +39,12 @@ let
       "signoz-telemetrystore-migrator"
       "signoz"
       "signoz-otel-collector"
-    ];
-    obs-grafana = [
-      "caddy"
-      "tempo"
-      "prometheus"
-      "loki"
-      "grafana"
-      "grafana-funnel"
       "otel-collector"
+      "otel-funnel"
     ];
   };
 
-  expectedFailures = [ "authentik-cloudflared" "ridash-cloudflared" "grafana-funnel" ];
+  expectedFailures = [ "authentik-cloudflared" "ridash-cloudflared" "otel-funnel" ];
   openseoTier = "core";
   stateDir = "/run/homelab-smoke";
   tierFile = "${stateDir}/tier.yaml";

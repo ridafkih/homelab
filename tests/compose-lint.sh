@@ -130,7 +130,7 @@ services:
   relative-value:
     image: docker.io/library/busybox:1.37.0@$digest
     volumes:
-      - \${PROMETHEUS_RETENTION:?}/x:/x
+      - \${CADDY_DOMAIN:?}/x:/x
   undeclared-volume:
     image: docker.io/library/busybox:1.37.0@$digest
     volumes:
@@ -348,7 +348,6 @@ if [ -f "$work/homelab.env" ]; then
   value_of() { sed -n "s/^$1=//p" "$env_file"; }
   check "homelab.env CADDY_DOMAIN" "$(value_of CADDY_DOMAIN)" "rida.sh"
   check "homelab.env CADDY_HOST_MACHINE_HOSTNAME" "$(value_of CADDY_HOST_MACHINE_HOSTNAME)" "172.17.0.1"
-  check "homelab.env PROMETHEUS_RETENTION" "$(value_of PROMETHEUS_RETENTION)" "30d"
   check "homelab.env SEAFILE_DATA_PATH" "$(value_of SEAFILE_DATA_PATH)" "/data/seafile"
   check "homelab.env HOMELAB_DATA_DIR" "$(value_of HOMELAB_DATA_DIR)" "/home/rida/homelab/.data"
   check "homelab.env HOMELAB_SECRETS_DIR" "$(value_of HOMELAB_SECRETS_DIR)" "/run/secrets/rendered"
@@ -358,7 +357,7 @@ if [ -f "$work/homelab.env" ]; then
   check "homelab.env has no HOMELAB_DIR" "$(grep -c '^HOMELAB_DIR=' "$env_file" || true)" "0"
   check "homelab.env lines are all KEY=value" "$(grep -cvE '^[A-Z][A-Z0-9_]*=[^ $]+$' "$env_file" || true)" "0"
   check "homelab.env has no duplicate keys" "$(cut -d= -f1 "$env_file" | sort | uniq -d | tr '\n' ' ')" ""
-  allowed="AUTHENTIK_POSTGRESQL__HOST AUTHENTIK_POSTGRESQL__NAME AUTHENTIK_REDIS__HOST CADDY_DOMAIN CADDY_HOST_MACHINE_HOSTNAME HOMELAB_DATA_DIR HOMELAB_SECRETS_DIR PROMETHEUS_RETENTION SEAFILE_DATA_PATH"
+  allowed="AUTHENTIK_POSTGRESQL__HOST AUTHENTIK_POSTGRESQL__NAME AUTHENTIK_REDIS__HOST CADDY_DOMAIN CADDY_HOST_MACHINE_HOSTNAME HOMELAB_DATA_DIR HOMELAB_SECRETS_DIR SEAFILE_DATA_PATH"
   while IFS='=' read -r key _; do
     case " $allowed " in
       *" $key "*) pass ;;
