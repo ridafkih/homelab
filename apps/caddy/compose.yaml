@@ -18,6 +18,8 @@ services:
       - ${HOMELAB_SECRETS_DIR:?}/caddy.env
     networks:
       homelab-network:
+        aliases:
+          - id.${CADDY_DOMAIN:?}
       authentik-network:
       ridash-network:
         aliases:
