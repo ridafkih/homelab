@@ -96,6 +96,10 @@ in
       }
     ];
 
+    networking.firewall.extraCommands = lib.mkIf (config.networking.firewall.checkReversePath != false) ''
+      ip46tables -t mangle -I nixos-fw-rpfilter 1 -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+    '';
+
     systemd.services.egress-policy = {
       description = "Whole-box egress policy routing and kill switch";
       wantedBy = [ "sysinit.target" ];
