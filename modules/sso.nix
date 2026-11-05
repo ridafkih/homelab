@@ -60,6 +60,19 @@ let
     );
   };
 
+  seafileOauth = pkgs.writeShellApplication {
+    name = "seafile-oauth";
+    runtimeInputs = [ pkgs.gnugrep pkgs.coreutils ];
+    text = ''
+      readonly settings=$1
+      readonly line="from seahub_oauth_settings import *"
+      if ! grep -qxF "$line" "$settings"; then
+        printf '\n%s\n' "$line" >> "$settings"
+        echo "added the Pocket ID import to $settings"
+      fi
+    '';
+  };
+
   gatedApps = {
     sonarr = "admins";
     radarr = "admins";
@@ -245,6 +258,18 @@ in
         "${jellyfinConfig}/config/branding.xml"
         "${toString config.homelab.uid}:${toString config.homelab.gid}"
       ];
+    };
+  };
+
+  systemd.services.seafile-oauth = {
+    description = "Load the Pocket ID settings into Seahub";
+    before = [ "homelab-compose.service" ];
+    wantedBy = [ "multi-user.target" "homelab-compose.service" ];
+    unitConfig.RequiresMountsFor = [ committedEnv.SEAFILE_DATA_PATH ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = lib.escapeShellArgs [ (lib.getExe seafileOauth) "${committedEnv.SEAFILE_DATA_PATH}/seafile/conf/seahub_settings.py" ];
     };
   };
 
