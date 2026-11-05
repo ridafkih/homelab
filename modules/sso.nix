@@ -11,7 +11,7 @@ let
 
   pocketIdPort = 1411;
   tinyauthPort = 3820;
-  caddyNetwork = "172.20.0.0/16";
+  dockerNetworks = "172.16.0.0/12";
   pocketIdUrl = urlOf "id";
   pocketIdLocal = "http://127.0.0.1:${toString pocketIdPort}";
   tinyauthUrl = urlOf "auth";
@@ -76,9 +76,13 @@ let
   tinyauthConfig = pkgs.writeText "tinyauth.json" (builtins.toJSON {
     appUrl = tinyauthUrl;
     labelProvider = "none";
+    server = {
+      address = "0.0.0.0";
+      port = tinyauthPort;
+    };
     auth = {
       secureCookie = true;
-      trustedProxies = [ caddyNetwork ];
+      trustedProxies = [ dockerNetworks ];
       sessionExpiry = 7 * 86400;
       acls.policy = "deny";
     };
@@ -123,7 +127,7 @@ in
       APPURL = tinyauthUrl;
       SERVER_PORT = tinyauthPort;
       CONFIGFILE = "${tinyauthConfig}";
-      AUTH_TRUSTEDPROXIES = caddyNetwork;
+      AUTH_TRUSTEDPROXIES = dockerNetworks;
     };
   };
 
@@ -152,6 +156,6 @@ in
   environment.systemPackages = [ invite ];
 
   networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -s ${caddyNetwork} -p tcp -m multiport --dports ${toString pocketIdPort},${toString tinyauthPort} -j nixos-fw-accept
+    iptables -I nixos-fw -s ${dockerNetworks} -p tcp -m multiport --dports ${toString pocketIdPort},${toString tinyauthPort} -j nixos-fw-accept
   '';
 }
