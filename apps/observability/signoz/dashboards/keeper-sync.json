@@ -1,0 +1,2584 @@
+{
+  "name": "keeper-sync",
+  "schemaVersion": "v6",
+  "tags": [
+    {
+      "key": "area",
+      "value": "keeper"
+    },
+    {
+      "key": "area",
+      "value": "observability"
+    },
+    {
+      "key": "area",
+      "value": "production"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Calendar Sync Health",
+      "description": "Destination reconciliation health, failure blast radius, source-ingest health, and infrastructure rollback signals. In-sync reconciliations are explicitly counted; repeated attempts are separated from unique affected users/calendars."
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "provider",
+          "display": {
+            "name": "provider",
+            "description": "Provider (provider.name)"
+          },
+          "allowMultiple": true,
+          "allowAllValue": true,
+          "sort": "none",
+          "defaultValue": [
+            "google",
+            "outlook",
+            "caldav",
+            "fastmail",
+            "icloud",
+            "ical"
+          ],
+          "plugin": {
+            "kind": "signoz/CustomVariable",
+            "spec": {
+              "customValue": "google,outlook,caldav,fastmail,icloud,ical"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "plan",
+          "display": {
+            "name": "plan",
+            "description": "User plan (user.plan)"
+          },
+          "allowMultiple": true,
+          "allowAllValue": true,
+          "sort": "none",
+          "defaultValue": [
+            "free",
+            "pro"
+          ],
+          "plugin": {
+            "kind": "signoz/CustomVariable",
+            "spec": {
+              "customValue": "free,pro"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "in_sync": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "In-Sync Reconciliations",
+            "description": "Actual provider reconciliations that required no mutations. This is the dominant healthy outcome."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND attributes_string['outcome'] = 'in-sync'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "changed": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Changed Successfully",
+            "description": "Actual reconciliations that completed mutations successfully."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND attributes_string['outcome'] = 'success'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "preflight": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Preflight / Job Failures",
+            "description": "Jobs that failed before emitting a sync:calendar result: credentials, database access, provider setup, and similar failures."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'push-sync' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND attributes_string['outcome'] = 'error'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "partial_error": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Reconciliation Partial / Error",
+            "description": "Failures after a provider reconciliation started."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND match(attributes_string['outcome'], '^(partial|error)$')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "affected_calendars": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Affected Calendars",
+            "description": "Distinct destination calendars with a partial/error result or preflight failure."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['calendar'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-sync|sync:calendar)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND match(attributes_string['outcome'], '^(partial|error)$')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "affected_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Affected Users",
+            "description": "Distinct users affected; repeated retries do not inflate this number."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-sync|sync:calendar)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND match(attributes_string['outcome'], '^(partial|error)$')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "reflect": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Webhook Time to Reflect",
+            "description": "Elapsed time from receiving a provider webhook to the destination sync for it completing (push_sync.reflect_ms on the worker's sync:calendar event). The 'wrote a change' line only counts syncs with operations.total > 0, over 1h buckets."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT * FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(900, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'p50' AS q, quantile(0.5)(JSONExtractFloat(attributes_string['push_sync'], 'reflect_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND position(body, 'sync:calendar') > 0 AND position(body, 'reflect_ms') > 0 AND JSONHas(attributes_string['push_sync'], 'reflect_ms') GROUP BY ts, q ORDER BY ts) UNION ALL SELECT * FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(900, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'p90' AS q, quantile(0.9)(JSONExtractFloat(attributes_string['push_sync'], 'reflect_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND position(body, 'sync:calendar') > 0 AND position(body, 'reflect_ms') > 0 AND JSONHas(attributes_string['push_sync'], 'reflect_ms') GROUP BY ts, q ORDER BY ts) UNION ALL SELECT * FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(900, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'p99' AS q, quantile(0.99)(JSONExtractFloat(attributes_string['push_sync'], 'reflect_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND position(body, 'sync:calendar') > 0 AND position(body, 'reflect_ms') > 0 AND JSONHas(attributes_string['push_sync'], 'reflect_ms') GROUP BY ts, q ORDER BY ts) UNION ALL SELECT * FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(3600, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'p50 — wrote a change' AS q, quantile(0.5)(JSONExtractFloat(attributes_string['push_sync'], 'reflect_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND position(body, 'sync:calendar') > 0 AND position(body, 'reflect_ms') > 0 AND JSONHas(attributes_string['push_sync'], 'reflect_ms') AND JSONExtractFloat(attributes_string['operations'], 'total') > 0 GROUP BY ts, q ORDER BY ts)",
+                          "disabled": false,
+                          "legend": "{{q}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "reflect_p90": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Webhook Time to Reflect (p90)",
+            "description": "p90 across the selected range. Elapsed time from receiving a provider webhook to the destination sync for it completing (push_sync.reflect_ms on the worker's sync:calendar event)."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT quantile(0.9)(JSONExtractFloat(attributes_string['push_sync'], 'reflect_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND position(body, 'sync:calendar') > 0 AND position(body, 'reflect_ms') > 0 AND JSONHas(attributes_string['push_sync'], 'reflect_ms')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "ingest_duration": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Ingest Duration (median) by Provider",
+            "description": "Median end-to-end ingest per source calendar, split by provider. Provider I/O dominates this number, so a single provider inflating while the others hold steady points at that provider rather than at the fleet. Pinning at 120s means sources are burning their whole deadline."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['provider'], 'name') AS p, quantile(0.5)(attributes_number['duration_ms']) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND position(body, 'ingest-source') > 0 AND JSONExtractString(attributes_string['provider'], 'name') != '' AND mapContains(attributes_number, 'duration_ms') GROUP BY ts, p ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{p}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "rate_limiter": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Rate Limiter Wait (p90) by Provider",
+            "description": "Time waiting on a provider permit, split by provider. Each provider is governed by a different limiter, so the split is the only way to tell which limiter is actually binding."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['provider'], 'name') AS p, quantile(0.9)(JSONExtractFloat(attributes_string['wait'], 'rate_limiter_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND position(body, 'ingest-source') > 0 AND JSONExtractString(attributes_string['provider'], 'name') != '' AND JSONHas(attributes_string['wait'], 'rate_limiter_ms') GROUP BY ts, p ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{p}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "slot_wait": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Slot Wait (median) by Lane",
+            "description": "Queueing before a calendar starts ingesting, split by lane rather than by provider: slot wait is internal contention, not provider latency."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['ingest'], 'trigger') AS t, quantile(0.5)(JSONExtractFloat(attributes_string['concurrency'], 'slot_wait_ms')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND position(body, 'ingest-source') > 0 AND JSONExtractString(attributes_string['ingest'], 'trigger') != '' AND JSONHas(attributes_string['concurrency'], 'slot_wait_ms') GROUP BY ts, t ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{t}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "ingest_error_share": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Ingest Error Share by Provider",
+            "description": "Share of ingest runs ending in error, split by provider. Matches on the top-level outcome field rather than a raw line match. A provider with traffic and no errors plots a flat zero."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "percentunit",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['provider'], 'name') AS p, countIf(attributes_string['outcome'] = 'error') / count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND position(body, 'ingest-source') > 0 AND JSONExtractString(attributes_string['provider'], 'name') != '' GROUP BY ts, p ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{p}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "dest_outcomes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Destination Reconciliation Outcomes",
+            "description": "Only actual sync:calendar reconciliations. In-sync, success, partial, and error are shown together."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ops",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['user'], 'plan') AS user_plan, attributes_string['outcome'] AS outcome, count() / greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, user_plan, outcome ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{user_plan}} — {{outcome}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "dest_causes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Destination Failure Attempts by Cause",
+            "description": "Repeated attempts are intentionally visible here; use Affected Users/Calendars for blast radius."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ops",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['error'], 'slug') AS error_slug, count() / greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-sync|sync:calendar)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND match(attributes_string['outcome'], '^(partial|error)$') GROUP BY ts, error_slug ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{error_slug}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "top_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top Users by Failed Attempts",
+            "description": "Shows concentration and retry amplification; this is attempt count, not unique failures."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT JSONExtractString(attributes_string['user'], 'plan') AS user_plan, JSONExtractString(attributes_string['user'], 'id') AS user_id, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-sync|sync:calendar)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND match(attributes_string['outcome'], '^(partial|error)$') GROUP BY user_plan, user_id ORDER BY value DESC LIMIT 10",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "top_calendars": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top Calendars by Failed Attempts",
+            "description": "Repeated failures for the same destination are grouped together."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT JSONExtractString(attributes_string['provider'], 'name') AS provider_name, JSONExtractString(attributes_string['calendar'], 'id') AS calendar_id, JSONExtractString(attributes_string['user'], 'id') AS user_id, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-sync|sync:calendar)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND match(attributes_string['outcome'], '^(partial|error)$') GROUP BY provider_name, calendar_id, user_id ORDER BY value DESC LIMIT 10",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "mutations": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Destination Mutations",
+            "description": "Destination mutations only (sync.events_added / sync.events_removed summed per bucket); source-ingest changes are not mixed into this chart."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT * FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(60, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'Added' AS series, sum(JSONExtractFloat(attributes_string['sync'], 'events_added')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' GROUP BY ts, series ORDER BY ts) UNION ALL SELECT * FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(60, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'Removed' AS series, sum(JSONExtractFloat(attributes_string['sync'], 'events_removed')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' GROUP BY ts, series ORDER BY ts)",
+                          "disabled": false,
+                          "legend": "{{series}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "dest_p95": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "P95 Destination Reconciliation Duration",
+            "description": "Provider reconciliation duration, excluding preflight failures."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['provider'], 'name') AS provider_name, quantile(0.95)(attributes_number['duration_ms']) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name'))) AND mapContains(attributes_number, 'duration_ms') GROUP BY ts, provider_name ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{provider_name}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "repeat_replacing": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Calendars Replacing Repeatedly",
+            "description": "Destination calendars with stale replacements in more than one reconciliation during the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM (SELECT JSONExtractString(attributes_string['calendar'], 'id') AS calendar_id, count() AS c FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name'))) AND JSONExtractFloat(attributes_string['stale_mappings'], 'count') > 0 GROUP BY calendar_id HAVING c > 1)",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "stale_total": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Stale Mapping Replacements",
+            "description": "Total mapping replacement decisions in the selected range. Repeated loops accumulate here."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT sum(JSONExtractFloat(attributes_string['stale_mappings'], 'count')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name'))) AND JSONExtractFloat(attributes_string['stale_mappings'], 'count') > 0",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "stale_reasons": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Stale Mapping Reasons",
+            "description": "Non-exclusive reasons a mapped destination event was replaced, summed per bucket. A mapping can contribute to more than one reason."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT ts, pair.1 AS reason, sum(pair.2) AS value FROM (SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(60, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, arrayJoin([('remote content changed', JSONExtractFloat(attributes_string['stale_mappings'], 'remote_content_changed_count')), ('remote time changed', JSONExtractFloat(attributes_string['stale_mappings'], 'remote_time_changed_count')), ('remote missing', JSONExtractFloat(attributes_string['stale_mappings'], 'remote_missing_count')), ('local hash changed', JSONExtractFloat(attributes_string['stale_mappings'], 'local_hash_changed_count')), ('remote availability changed', JSONExtractFloat(attributes_string['stale_mappings'], 'remote_availability_changed_count')), ('occurrence reassigned', JSONExtractFloat(attributes_string['stale_mappings'], 'occurrence_reassigned_count'))]) AS pair FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name')))) GROUP BY ts, reason ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{reason}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "stale_calendars": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Top Calendars by Stale Replacements",
+            "description": "Total stale mapping replacements by destination calendar. Use the repeated-calendar stat to distinguish loops from one-time legitimate changes."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT JSONExtractString(attributes_string['provider'], 'name') AS provider_name, JSONExtractString(attributes_string['calendar'], 'id') AS calendar_id, JSONExtractString(attributes_string['user'], 'plan') AS user_plan, JSONExtractString(attributes_string['user'], 'id') AS user_id, sum(JSONExtractFloat(attributes_string['stale_mappings'], 'count')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name'))) AND JSONExtractFloat(attributes_string['stale_mappings'], 'count') > 0 GROUP BY provider_name, calendar_id, user_plan, user_id ORDER BY value DESC LIMIT 10",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "db_conn_timeouts": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "DB Connection Timeouts",
+            "description": "Raw and structured database connection-starvation signals."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] IN ('keeper-cron', 'keeper-worker', 'keeper-api') AND match(body, 'ERR_POSTGRES_CONNECTION_TIMEOUT|Connection timeout after 30s')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "sync_deadlines": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Sync Deadlines",
+            "description": "Destination jobs that reached the configured overall deadline."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['error'], 'slug') = 'sync-deadline-exceeded'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "lock_fk": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Lock / FK / Recurrence Failures",
+            "description": "Correctness-critical lock renewal, foreign-key, and recurrence materialization failures."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] IN ('keeper-cron', 'keeper-worker') AND match(body, 'sync-lock-renewal-failed|foreign key|ForeignKey|recurrence-materialization-limit|recurrence material')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "throttles": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Provider Throttles / 429",
+            "description": "Structured rate-limit and Outlook mailbox-concurrency failures."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] IN ('keeper-cron', 'keeper-worker') AND attributes_string['event_name'] = 'wide_event' AND match(body, 'provider-rate-limited|MailboxConcurrency|ApplicationThrottled')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "reauth_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Users Requiring Reauth",
+            "description": "Distinct affected users, not repeated calendar attempts."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] IN ('keeper-cron', 'keeper-worker') AND match(JSONExtractString(attributes_string['error'], 'slug'), '^(provider-auth-failed|provider-token-refresh-failed)$')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "failed_enqueue": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Failed Enqueue Runs",
+            "description": "Cron destination-enumeration failures; these mean an entire free/pro tick enqueued no work."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-destinations.*)$') AND attributes_string['outcome'] = 'error'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "ingest_outcomes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Source Ingest Outcomes by Provider",
+            "description": "Per-calendar source results. Parent AggregateError noise is excluded."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ops",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['provider'], 'name') AS provider_name, attributes_string['outcome'] AS outcome, count() / greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-source' AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name'))) GROUP BY ts, provider_name, outcome ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{provider_name}} — {{outcome}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "ingest_causes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Source Ingest Failures by Cause",
+            "description": "Per-calendar failure causes, including permanent authentication failures and transient provider errors."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ops",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['provider'], 'name') AS provider_name, JSONExtractString(attributes_string['error'], 'slug') AS error_slug, count() / greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-source' AND attributes_string['outcome'] = 'error' AND (hasAll({{.provider}}, ['google', 'outlook', 'caldav', 'fastmail', 'icloud', 'ical']) OR has({{.provider}}, JSONExtractString(attributes_string['provider'], 'name'))) GROUP BY ts, provider_name, error_slug ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{provider_name}} — {{error_slug}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "sources_ok": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Source Calendars Succeeded",
+            "description": "Per-calendar successes; unlike the parent job outcome, these writes committed."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-source' AND attributes_string['outcome'] = 'success'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "sources_failed": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Source Calendars Failed",
+            "description": "Per-calendar failures. Compare with succeeded rather than treating the parent AggregateError as total failure."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-source' AND attributes_string['outcome'] = 'error'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "parent_failures": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Parent Runs Reporting Child Failures",
+            "description": "Current code marks the entire run error when any source fails; this is not a rollback of successful sources."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-sources' AND attributes_string['outcome'] = 'error'",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "longest_run": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Longest Source Run",
+            "description": "Wall-clock duration of the slowest monolithic source-ingest pass."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT max(attributes_number['duration_ms']) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-sources' AND mapContains(attributes_number, 'duration_ms')",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "jobs_enqueued": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Destination Jobs Enqueued",
+            "description": "Jobs accepted for each plan, summed per bucket. Missing points paired with Failed Enqueue Runs indicate a missed scheduling tick."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(60, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['batch'], 'plan') AS batch_plan, sum(JSONExtractFloat(attributes_string['batch'], 'jobs_enqueued')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-destinations.*)$') AND JSONHas(attributes_string['batch'], 'jobs_enqueued') GROUP BY ts, batch_plan ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{batch_plan}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "parent_duration": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Source Parent Run Duration",
+            "description": "Shows whether the nominal one-minute source job is actually taking multiple minutes."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(300, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, 'ingest-sources' AS series, max(attributes_number['duration_ms']) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-sources' AND mapContains(attributes_number, 'duration_ms') GROUP BY ts, series ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{series}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "recent_dest_errors": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Recent Destination Errors",
+            "description": "Destination errors, including both preflight failures and provider reconciliation failures."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toString(fromUnixTimestamp64Nano(timestamp)) AS time, JSONExtractString(attributes_string['operation'], 'name') AS op, attributes_string['outcome'] AS outcome, JSONExtractString(attributes_string['error'], 'slug') AS slug, JSONExtractString(attributes_string['provider'], 'name') AS provider, JSONExtractString(attributes_string['calendar'], 'id') AS calendar, JSONExtractString(attributes_string['user'], 'id') AS user, JSONExtractString(attributes_string['user'], 'plan') AS plan FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(push-sync|sync:calendar)$') AND match(attributes_string['outcome'], '^(partial|error)$') ORDER BY timestamp DESC LIMIT 200",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "recent_source_errors": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Recent Source / Scheduling Errors",
+            "description": "Source-calendar, parent-ingest, and destination-enqueue errors."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toString(fromUnixTimestamp64Nano(timestamp)) AS time, JSONExtractString(attributes_string['operation'], 'name') AS op, JSONExtractString(attributes_string['error'], 'slug') AS slug, JSONExtractString(attributes_string['provider'], 'name') AS provider, JSONExtractString(attributes_string['calendar'], 'id') AS calendar, JSONExtractString(attributes_string['user'], 'id') AS user FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-cron' AND attributes_string['outcome'] = 'error' ORDER BY timestamp DESC LIMIT 200",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "source_coverage": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Source Fleet Coverage — % of Polled Calendars Ingested (Pull)",
+            "description": "Distinct source calendars from keeper-cron ingest-source events. 'Fleet seen 6h' = calendars that emitted any ingest event in the past 6h; 'Connected' / 'Synced' = at least one successful ingest in the window. Windows are fixed (6h/1h/30m/5m/1m back from now) and ignore the time picker and the provider/plan variables. Percentages use 'Fleet seen 6h' as the denominator. Ingest runs in bursts, so 5m and 1m sawtooth with scheduler phase; 30m and 1h are the meaningful health numbers."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) AS `Fleet seen 6h`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 21600 SECOND) AND attributes_string['outcome'] = 'success') AS `Connected 6h`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 21600 SECOND) AND attributes_string['outcome'] = 'success') / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `Connected %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 3600 SECOND) AND attributes_string['outcome'] = 'success') AS `Synced ≤1h`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 3600 SECOND) AND attributes_string['outcome'] = 'success') / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤1h %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 1800 SECOND) AND attributes_string['outcome'] = 'success') AS `Synced ≤30m`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 1800 SECOND) AND attributes_string['outcome'] = 'success') / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤30m %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 300 SECOND) AND attributes_string['outcome'] = 'success') AS `Synced ≤5m`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 300 SECOND) AND attributes_string['outcome'] = 'success') / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤5m %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 60 SECOND) AND attributes_string['outcome'] = 'success') AS `Synced ≤1m`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 60 SECOND) AND attributes_string['outcome'] = 'success') / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤1m %` FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start >= toUInt64(toUnixTimestamp(now()) - 21600 - 1800) AND timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR) AND resources_string['service.name'] = 'keeper-cron' AND JSONExtractString(attributes_string['operation'], 'name') = 'ingest-source' AND JSONExtractString(attributes_string['calendar'], 'id') != ''",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "dest_coverage": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Destination Fleet Coverage — % of Active Calendars Reconciled (Push)",
+            "description": "Distinct destination calendars from keeper-worker sync:calendar events. 'Fleet seen 6h' = calendars with any sync attempt in the past 6h; 'Connected' / 'Synced' = at least one in-sync or success reconciliation in the window. Windows are fixed (6h/1h/30m/5m/1m back from now) and ignore the time picker and the provider/plan variables. Percentages use 'Fleet seen 6h' as the denominator. Ingest runs in bursts, so 5m and 1m sawtooth with scheduler phase; 30m and 1h are the meaningful health numbers."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) AS `Fleet seen 6h`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 21600 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) AS `Connected 6h`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 21600 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `Connected %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 3600 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) AS `Synced ≤1h`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 3600 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤1h %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 1800 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) AS `Synced ≤30m`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 1800 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤30m %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 300 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) AS `Synced ≤5m`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 300 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤5m %`, uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 60 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) AS `Synced ≤1m`, round(if(uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR)) = 0, 0, 100 * uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 60 SECOND) AND attributes_string['outcome'] IN ('in-sync', 'success')) / uniqExactIf(JSONExtractString(attributes_string['calendar'], 'id'), timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR))), 1) AS `≤1m %` FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start >= toUInt64(toUnixTimestamp(now()) - 21600 - 1800) AND timestamp >= toUnixTimestamp64Nano(now64() - INTERVAL 6 HOUR) AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['operation'], 'name') = 'sync:calendar' AND JSONExtractString(attributes_string['calendar'], 'id') != ''",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/in_sync"
+              }
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/changed"
+              }
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/preflight"
+              }
+            },
+            {
+              "x": 0,
+              "y": 3,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/partial_error"
+              }
+            },
+            {
+              "x": 4,
+              "y": 3,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/affected_calendars"
+              }
+            },
+            {
+              "x": 8,
+              "y": 3,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/affected_users"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 8,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/reflect"
+              }
+            },
+            {
+              "x": 8,
+              "y": 6,
+              "width": 4,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/reflect_p90"
+              }
+            },
+            {
+              "x": 0,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/ingest_duration"
+              }
+            },
+            {
+              "x": 6,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/rate_limiter"
+              }
+            },
+            {
+              "x": 0,
+              "y": 18,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/slot_wait"
+              }
+            },
+            {
+              "x": 6,
+              "y": 18,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/ingest_error_share"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/dest_outcomes"
+              }
+            },
+            {
+              "x": 6,
+              "y": 24,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/dest_causes"
+              }
+            },
+            {
+              "x": 0,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/top_users"
+              }
+            },
+            {
+              "x": 6,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/top_calendars"
+              }
+            },
+            {
+              "x": 0,
+              "y": 36,
+              "width": 6,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/mutations"
+              }
+            },
+            {
+              "x": 6,
+              "y": 36,
+              "width": 6,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/dest_p95"
+              }
+            },
+            {
+              "x": 0,
+              "y": 45,
+              "width": 6,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/repeat_replacing"
+              }
+            },
+            {
+              "x": 6,
+              "y": 45,
+              "width": 6,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/stale_total"
+              }
+            },
+            {
+              "x": 0,
+              "y": 48,
+              "width": 6,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/stale_reasons"
+              }
+            },
+            {
+              "x": 6,
+              "y": 48,
+              "width": 6,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/stale_calendars"
+              }
+            },
+            {
+              "x": 0,
+              "y": 56,
+              "width": 4,
+              "height": 2,
+              "content": {
+                "$ref": "#/spec/panels/db_conn_timeouts"
+              }
+            },
+            {
+              "x": 4,
+              "y": 56,
+              "width": 4,
+              "height": 2,
+              "content": {
+                "$ref": "#/spec/panels/sync_deadlines"
+              }
+            },
+            {
+              "x": 8,
+              "y": 56,
+              "width": 4,
+              "height": 2,
+              "content": {
+                "$ref": "#/spec/panels/lock_fk"
+              }
+            },
+            {
+              "x": 0,
+              "y": 58,
+              "width": 4,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/throttles"
+              }
+            },
+            {
+              "x": 4,
+              "y": 58,
+              "width": 4,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/reauth_users"
+              }
+            },
+            {
+              "x": 8,
+              "y": 58,
+              "width": 4,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/failed_enqueue"
+              }
+            },
+            {
+              "x": 0,
+              "y": 62,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/ingest_outcomes"
+              }
+            },
+            {
+              "x": 6,
+              "y": 62,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/ingest_causes"
+              }
+            },
+            {
+              "x": 0,
+              "y": 68,
+              "width": 4,
+              "height": 2,
+              "content": {
+                "$ref": "#/spec/panels/sources_ok"
+              }
+            },
+            {
+              "x": 4,
+              "y": 68,
+              "width": 4,
+              "height": 2,
+              "content": {
+                "$ref": "#/spec/panels/sources_failed"
+              }
+            },
+            {
+              "x": 8,
+              "y": 68,
+              "width": 4,
+              "height": 2,
+              "content": {
+                "$ref": "#/spec/panels/parent_failures"
+              }
+            },
+            {
+              "x": 0,
+              "y": 70,
+              "width": 12,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/longest_run"
+              }
+            },
+            {
+              "x": 0,
+              "y": 74,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/jobs_enqueued"
+              }
+            },
+            {
+              "x": 6,
+              "y": 74,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/parent_duration"
+              }
+            },
+            {
+              "x": 0,
+              "y": 80,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/recent_dest_errors"
+              }
+            },
+            {
+              "x": 0,
+              "y": 88,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/recent_source_errors"
+              }
+            },
+            {
+              "x": 0,
+              "y": 97,
+              "width": 12,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/source_coverage"
+              }
+            },
+            {
+              "x": 0,
+              "y": 101,
+              "width": 12,
+              "height": 5,
+              "content": {
+                "$ref": "#/spec/panels/dest_coverage"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "30m",
+    "refreshInterval": "1m",
+    "links": null
+  }
+}
