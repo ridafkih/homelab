@@ -11,8 +11,7 @@ services:
       - "4318:4318"
     env_file: ${HOMELAB_SECRETS_DIR:?}/otel.env
     depends_on:
-      - tempo
-      - loki
+      - signoz-otel-collector
     networks:
       - homelab-network
 
