@@ -11,7 +11,7 @@ Authentik (four containers and its own Cloudflare tunnel) only served Tailscale'
 - Containers that talk to Pocket ID server-side resolve `id.rida.sh` to Caddy through a network alias on `homelab-network`, so they never leave the box.
 - Groups and OIDC clients are declared in `modules/sso.nix`. `pocket-id-provision` applies them through the API on every switch: it creates what is missing, updates what drifted and sets each confidential client's secret from sops. Users, their passkeys and their group memberships are state in Pocket ID's database, not config; `pocket-id-invite` creates a user and prints a one-time sign-in link.
 - Tinyauth runs on the host on port 3820 at `https://auth.rida.sh`, signs in only through Pocket ID, and answers Caddy's `forward_auth` for apps without OIDC. Its app rules (domain and required group) are declared in the same module; anything not listed is denied.
-- The firewall accepts ports 1411 and 3820 only from `homelab-network` (`172.20.0.0/16`), where Caddy is.
+- The firewall accepts ports 1411 and 3820 from the Docker networks (`172.16.0.0/12`) and the tailnet only. Caddy sits on several networks and its source address depends on the route, so the rule cannot narrow to `homelab-network`. Tinyauth's settings live in one JSON file (`TINYAUTH_CONFIGFILE`), port included: with only `TINYAUTH_SERVER_PORT` set next to the config file, it listened on its default port 3000 and took it from AdGuard's web UI.
 - Pocket ID's SQLite database is dumped nightly with `.backup`, and both state directories are in the restic paths.
 
 ## Consequences
