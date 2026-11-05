@@ -5,5 +5,16 @@ services:
     volumes:
       - ${HOMELAB_DATA_DIR:?}/open-webui/app/backend/data:/app/backend/data
     restart: always
+    env_file:
+      - ${HOMELAB_SECRETS_DIR:?}/open-webui.env
+    environment:
+      WEBUI_URL: https://open-webui.${CADDY_DOMAIN:?}
+      ENABLE_OAUTH_SIGNUP: "false"
+      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: "true"
+      OAUTH_CLIENT_ID: open-webui
+      OAUTH_PROVIDER_NAME: Pocket ID
+      OPENID_PROVIDER_URL: https://id.${CADDY_DOMAIN:?}/.well-known/openid-configuration
+      OPENID_REDIRECT_URI: https://open-webui.${CADDY_DOMAIN:?}/oauth/oidc/callback
+      OAUTH_SCOPES: openid email profile
     networks:
       - homelab-network
