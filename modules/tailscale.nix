@@ -14,6 +14,7 @@ in
     extraSetFlags = [
       "--exit-node-allow-lan-access"
       "--accept-dns=false"
+      "--snat-subnet-routes=false"
     ];
   };
 
