@@ -18,3 +18,18 @@ Authentik (four containers and its own Cloudflare tunnel) only served Tailscale'
 
 - Passkeys are bound to `id.rida.sh`; changing that host loses every registered passkey.
 - Losing Pocket ID locks out every app's SSO path, so each app keeps a local admin login until its SSO is proven.
+
+## Apps
+
+| App | Sign-in | Notes |
+| --- | --- | --- |
+| Tailscale | Pocket ID (`tailscale` client) | WebFinger at `rida.sh` names `https://id.rida.sh` as the issuer |
+| Jellyfin | Pocket ID through the K0lin SSO plugin, `media` group | matched to the existing user by username; password login and Quick Connect stay for the TV and phone apps |
+| Open WebUI | Pocket ID, `admins` group | merged into the existing account by email, sign-ups off |
+| Seafile | Pocket ID | bound by Pocket ID subject in `social_auth_usersocialauth`; unknown users are refused |
+| qui | Pocket ID, `admins` group | |
+| Sonarr, Radarr, Prowlarr | Tinyauth, `admins` | External authentication; API calls with a key skip the gate |
+| Bazarr, qBittorrent, AdGuard, SigNoz, OpenSEO, Windows viewer | Tinyauth, `admins` | their own logins stay where they have one; SigNoz's API key and OpenSEO's `/mcp` skip the gate |
+| Seerr | Tinyauth, `media` | no OIDC release yet; its Jellyfin login stays behind the gate, API calls with a key skip it |
+
+A request skips the gate only when it carries an API key and targets an API path, so a bogus key reaches the app's own key check and nothing else. Port 8006 stays open on the LAN as 0007 decided; `windows.rida.sh` is the gated way in.
