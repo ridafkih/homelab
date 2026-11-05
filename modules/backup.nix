@@ -7,6 +7,8 @@ let
     "/root"
     "/home/rida"
     "/var/lib/tailscale"
+    "/var/lib/pocket-id"
+    "/var/lib/tinyauth"
     "/var/lib/docker/volumes/homelab_grafana-funnel"
     "/var/lib/docker/volumes/homelab_signoz-sqlite"
     "/var/lib/docker/volumes/homelab_grafana"
@@ -18,7 +20,7 @@ let
 
   databaseDumps = pkgs.writeShellApplication {
     name = "homelab-db-dumps";
-    runtimeInputs = [ config.virtualisation.docker.package pkgs.coreutils pkgs.gnugrep ];
+    runtimeInputs = [ config.virtualisation.docker.package pkgs.coreutils pkgs.gnugrep pkgs.sqlite ];
     text = ''
       umask 077
 
@@ -40,6 +42,13 @@ let
         local container=$1 target="$dump_dir/$1.sql"
         docker exec "$container" sh -c 'exec mariadb-dump -uroot -p"$MYSQL_ROOT_PASSWORD" --all-databases --single-transaction --routines --events --triggers' > "$target.partial"
         tail -n 1 "$target.partial" | grep -q "Dump completed" || fail "$container dump incomplete"
+        mv "$target.partial" "$target"
+      }
+
+      dump_sqlite() {
+        local source=$1 target="$dump_dir/$2.sqlite"
+        sqlite3 "$source" ".backup '$target.partial'"
+        [[ $(sqlite3 "$target.partial" "pragma integrity_check") == ok ]] || fail "$2 dump failed its integrity check"
         mv "$target.partial" "$target"
       }
 
@@ -80,6 +89,8 @@ let
       dump_postgres authentik-postgresql
       dump_mariadb seafile-db
       dump_openseo
+    '' + lib.optionalString config.services.pocket-id.enable ''
+      dump_sqlite ${config.services.pocket-id.dataDir}/data/pocket-id.db pocket-id
     '';
   };
 
