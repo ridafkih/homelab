@@ -121,7 +121,7 @@ let
         <item>
           <key><string>pocketid</string></key>
           <value>
-            <OidConfig>
+            <PluginConfiguration>
               <OidEndpoint>${pocketIdUrl}</OidEndpoint>
               <OidClientId>jellyfin</OidClientId>
               <OidSecret>@CLIENT_SECRET@</OidSecret>
@@ -151,7 +151,7 @@ let
               <DoNotValidateEndpoints>false</DoNotValidateEndpoints>
               <DoNotValidateIssuerName>false</DoNotValidateIssuerName>
               <DoNotLoadProfile>false</DoNotLoadProfile>
-            </OidConfig>
+            </PluginConfiguration>
           </value>
         </item>
       </OidConfigs>
