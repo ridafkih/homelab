@@ -162,7 +162,9 @@
     @openseo host open-seo.{env.DOMAIN}
     handle @openseo {
         @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
-        abort @outside_tailnet
+        handle @outside_tailnet {
+            abort
+        }
 
         @openseo_mcp {
             path /mcp /mcp/*
