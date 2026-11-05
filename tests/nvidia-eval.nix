@@ -57,7 +57,8 @@ let
   readable = rel:
     let attempt = builtins.tryEval (builtins.readFile (self + "/${rel}"));
     in if attempt.success then attempt.value else "";
-  filesWith = word: builtins.filter (rel: lib.hasInfix word (readable rel)) (filesUnder "");
+  contains = word: text: builtins.replaceStrings [ word ] [ "" ] text != text;
+  filesWith = word: builtins.filter (rel: contains word (readable rel)) (filesUnder "");
   forbiddenHits = lib.concatMap filesWith forbiddenWords;
 
   archFiles = [
