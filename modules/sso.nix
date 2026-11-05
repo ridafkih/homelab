@@ -28,7 +28,7 @@ let
     inherit id name callbackURLs groups;
     logoutCallbackURLs = [ ];
     isPublic = false;
-    pkceEnabled = id != "tailscale";
+    pkceEnabled = id == "jellyfin";
   };
 
   clients = [
@@ -105,6 +105,77 @@ let
     }) gatedApps;
   });
 
+  jellyfinPlugin = pkgs.fetchzip {
+    url = "https://github.com/K0lin/jellyfin-plugin-sso/releases/download/v5.1.1/sso-authentication_5.1.1.zip";
+    hash = "sha256-QYzyg8pJvsLvmJbgOujhms7vY7BmLlqgcndxqNGyJcI=";
+    stripRoot = false;
+  };
+
+  jellyfinConfig = config.homelab.dataDir + "/jellyfin/config";
+
+  jellyfinSsoTemplate = pkgs.writeText "SSO-Auth.xml" ''
+    <?xml version="1.0" encoding="utf-8"?>
+    <PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <SamlConfigs />
+      <OidConfigs>
+        <item>
+          <key><string>pocketid</string></key>
+          <value>
+            <OidConfig>
+              <OidEndpoint>${pocketIdUrl}</OidEndpoint>
+              <OidClientId>jellyfin</OidClientId>
+              <OidSecret>@CLIENT_SECRET@</OidSecret>
+              <Enabled>true</Enabled>
+              <EnableAuthorization>false</EnableAuthorization>
+              <EnableAllFolders>false</EnableAllFolders>
+              <EnabledFolders />
+              <AdminRoles />
+              <PreserveAdminPermissions>true</PreserveAdminPermissions>
+              <Roles />
+              <EnableFolderRoles>false</EnableFolderRoles>
+              <EnableLiveTvRoles>false</EnableLiveTvRoles>
+              <EnableLiveTv>false</EnableLiveTv>
+              <EnableLiveTvManagement>false</EnableLiveTvManagement>
+              <LiveTvRoles />
+              <LiveTvManagementRoles />
+              <FolderRoleMapping />
+              <RoleClaim>groups</RoleClaim>
+              <OidScopes />
+              <OverrideDefaultScopes>false</OverrideDefaultScopes>
+              <SchemeOverride>https</SchemeOverride>
+              <NewPath>true</NewPath>
+              <CanonicalLinks />
+              <DefaultUsernameClaim>preferred_username</DefaultUsernameClaim>
+              <DisableHttps>false</DisableHttps>
+              <DisablePushedAuthorization>false</DisablePushedAuthorization>
+              <DoNotValidateEndpoints>false</DoNotValidateEndpoints>
+              <DoNotValidateIssuerName>false</DoNotValidateIssuerName>
+              <DoNotLoadProfile>false</DoNotLoadProfile>
+            </OidConfig>
+          </value>
+        </item>
+      </OidConfigs>
+    </PluginConfiguration>
+  '';
+
+  jellyfinSignInButton = lib.escapeXML ''
+    <form action="${urlOf "jellyfin"}/sso/OID/start/pocketid" method="get"><button class="raised block emby-button button-submit" type="submit">Sign in with Pocket ID</button></form>
+  '';
+
+  jellyfinBranding = pkgs.writeText "branding.xml" ''
+    <?xml version="1.0" encoding="utf-8"?>
+    <BrandingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <LoginDisclaimer>${lib.trim jellyfinSignInButton}</LoginDisclaimer>
+      <CustomCss />
+      <SplashscreenEnabled>false</SplashscreenEnabled>
+    </BrandingOptions>
+  '';
+
+  jellyfinSso = pkgs.writeShellApplication {
+    name = "jellyfin-sso";
+    runtimeInputs = [ pkgs.coreutils pkgs.diffutils pkgs.gawk config.virtualisation.docker.package ];
+    text = builtins.readFile ./jellyfin-sso.sh;
+  };
 in
 {
   services.pocket-id = {
@@ -150,6 +221,30 @@ in
         ++ map (id: "${id}:${clientSecretPath id}") confidentialClients;
       ExecStart = "${lib.getExe provision} ${spec} ${pocketIdLocal}/api %d/api-key %d";
       DynamicUser = true;
+    };
+  };
+
+  systemd.services.jellyfin-sso = {
+    description = "Install and configure the Jellyfin SSO plugin";
+    before = [ "homelab-compose.service" ];
+    wantedBy = [ "multi-user.target" "homelab-compose.service" ];
+    after = [ "docker.service" ];
+    restartTriggers = [ jellyfinPlugin jellyfinSsoTemplate jellyfinBranding ];
+    unitConfig.RequiresMountsFor = [ config.homelab.dataDir ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = lib.escapeShellArgs [
+        (lib.getExe jellyfinSso)
+        jellyfinPlugin
+        "${jellyfinConfig}/plugins/SSO Authentication_5.1.1"
+        jellyfinSsoTemplate
+        "${jellyfinConfig}/plugins/configurations/SSO-Auth.xml"
+        (clientSecretPath "jellyfin")
+        jellyfinBranding
+        "${jellyfinConfig}/config/branding.xml"
+        "${toString config.homelab.uid}:${toString config.homelab.gid}"
+      ];
     };
   };
 
