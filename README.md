@@ -8,7 +8,7 @@ A Ryzen 7 7800X3D with 64 GB of RAM and an RTX 4080 Super, used headless for Jel
 
 ## What runs
 
-NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups and the egress policy. Everything else is a Docker Compose app under `apps/`:
+NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups, the egress policy and sign-in (Pocket ID and Tinyauth). Everything else is a Docker Compose app under `apps/`:
 
 - `caddy`: reverse proxy and TLS for the `rida.sh` subdomains, with Cloudflare DNS challenges
 - `authentik`: single sign-on, reached from outside through its own Cloudflare tunnel
@@ -85,7 +85,7 @@ Backups are on-disk only, with restic, every night at 03:30. There is no off-sit
 - `/mnt/disk2/backup/restic` holds disk1's Seafile half
 - `/mnt/disk1/backup/restic` holds disk2's Seafile half
 
-Both also hold `/etc`, `/root`, the checkout and its app data, Tailscale's state, a few Docker volumes and nightly dumps of the Authentik, Seafile and OpenSEO databases. The media library (`/data/media`) is never backed up: if it goes, it goes. The Windows VM disk is excluded too.
+Both also hold `/etc`, `/root`, the checkout and its app data, Tailscale's, Pocket ID's and Tinyauth's state, a few Docker volumes and nightly dumps of the Authentik, Pocket ID, Seafile and OpenSEO databases. The media library (`/data/media`) is never backed up: if it goes, it goes. The Windows VM disk is excluded too.
 
 Restoring files, Seafile and the databases is in [docs/restore.md](./docs/restore.md).
 
