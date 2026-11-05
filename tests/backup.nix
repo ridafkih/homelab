@@ -18,6 +18,8 @@ let
     "/root"
     "/home/rida"
     "/var/lib/tailscale"
+    "/var/lib/pocket-id"
+    "/var/lib/tinyauth"
     "/var/lib/docker/volumes/homelab_grafana-funnel"
     "/var/lib/docker/volumes/homelab_signoz-sqlite"
     "/var/lib/docker/volumes/homelab_grafana"
