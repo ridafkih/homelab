@@ -161,10 +161,14 @@
 
     @openseo host open-seo.{env.DOMAIN}
     handle @openseo {
-        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48 172.19.0.1 172.20.0.1
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
         abort @outside_tailnet
 
-        handle /mcp* {
+        @openseo_mcp {
+            path /mcp /mcp/*
+            remote_ip 100.76.193.51
+        }
+        handle @openseo_mcp {
             reverse_proxy open-seo:80
         }
 
