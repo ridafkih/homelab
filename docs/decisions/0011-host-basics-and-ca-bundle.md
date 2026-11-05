@@ -6,7 +6,7 @@ Arch had smartd, a 1 GB journald cap, an eMudhra CA blocklist, and a pacman hook
 
 ## Decision
 
-- `modules/monitoring.nix`: smartd on the four disks by id, with Arch's flags and schedule and no notifiers; journald capped at 1 GB.
+- `modules/monitoring.nix`: smartd on the four disks by id, with Arch's flags and schedule and no notifiers; journald capped at 1 GB. The three Seagates sit behind TerraMas USB bridges, where smartd can't detect the device type and exits, so they also take `-d sat`.
 - `modules/trust.nix`: `/etc/homelab-ca/certs/ca-certificates.crt` is a bundle without trust rules, built from the NixOS CA bundle. NixOS 26.05 already distrusts the eMudhra roots, so no blocklist ships. `homelab.trust.bundleSource` is its store path, which changes whenever the bundle does, so `homelab-compose` restarts on a CA change.
 - Containers mount `/etc/homelab-ca/certs:/etc/ssl/certs:ro`, as on Arch.
 
