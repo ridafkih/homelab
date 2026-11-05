@@ -67,7 +67,7 @@ let
       RemainAfterExit = true;
       ExecStart = composeCommand name project (upVerb name);
       ExecReload = composeCommand name project (upVerb name);
-      ExecStop = composeCommand name project [ "down" ];
+      ExecStop = composeCommand name project [ "down" "--remove-orphans" ];
       TimeoutStartSec = "1h";
       TimeoutStopSec = "5min";
     };

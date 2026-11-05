@@ -182,7 +182,7 @@ let
       ${absentLines}
       need start ${lib.escapeShellArg upArgs}
       need reload ${lib.escapeShellArg upArgs}
-      need stop " down"
+      need stop " down --remove-orphans"
       refuse stop " up "
     '';
 
