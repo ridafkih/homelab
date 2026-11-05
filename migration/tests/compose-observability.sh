@@ -46,6 +46,13 @@ check() { if [ "$2" = "$3" ]; then pass; else fail "$1: expected [$3], got [$2]"
 services="otel-collector tempo prometheus loki grafana grafana-funnel signoz-init-clickhouse signoz-zookeeper signoz-clickhouse signoz-telemetrystore-migrator signoz signoz-otel-collector"
 volumes="grafana grafana-funnel loki prometheus signoz-clickhouse signoz-clickhouse-scripts signoz-sqlite signoz-zookeeper tempo"
 configs="otel-collector.yaml tempo.yaml loki.yaml prometheus.yml grafana-datasources.yaml tailscale-serve.json signoz/clickhouse-cluster.xml signoz/clickhouse-config.xml signoz/clickhouse-custom-function.xml signoz/clickhouse-users.xml signoz/otel-collector-opamp.yaml signoz/otel-collector.yaml"
+ported="loki.yaml=da3982d481ed7affcbbc1c2ffef919d91e056eb3 otel-collector.yaml=3431d64c0053fbf833280bea6b3a1258f15bc35f"
+
+ported_blob() {
+  for entry in $ported; do
+    if [ "${entry%%=*}" = "$1" ]; then echo "${entry#*=}"; fi
+  done
+}
 
 cat > "$scratch/pins.tsv" <<'EOF'
 otel-collector	otel-collector	otel/opentelemetry-collector-contrib:latest@sha256:340c9ca6a36617084c6661bdc4f0fe92b7cda5a805d61673ec8db375fddc522b
@@ -73,16 +80,24 @@ for f in $configs; do printf 'R100\tconfig/%s\t%s/config/%s\n' "$f" "$app" "$f";
 for f in $configs; do
   [ ! -e "$repo/config/$f" ] && pass || fail "config/$f still exists in the working tree"
   if git -C "$repo" ls-files --error-unmatch "config/$f" >/dev/null 2>&1; then fail "config/$f is still tracked"; else pass; fi
-  expected=$(git -C "$repo" rev-parse "$baseline:config/$f")
-  check "HEAD blob of $app/config/$f equals $baseline:config/$f" "$(git -C "$repo" rev-parse -q --verify "HEAD:$app/config/$f" 2>/dev/null || echo missing)" "$expected"
+  expected=$(ported_blob "$f")
+  source="main's ported config/$f"
+  if [ -z "$expected" ]; then
+    expected=$(git -C "$repo" rev-parse "$baseline:config/$f")
+    source="$baseline:config/$f"
+  fi
+  check "HEAD blob of $app/config/$f equals $source" "$(git -C "$repo" rev-parse -q --verify "HEAD:$app/config/$f" 2>/dev/null || echo missing)" "$expected"
   if [ -f "$repo/$app/config/$f" ]; then
     check "working tree $app/config/$f is byte-identical" "$(git -C "$repo" hash-object "$app/config/$f")" "$expected"
   else
     fail "$app/config/$f is missing from the working tree"
   fi
-  check "git diff -M shows config/$f renamed at 100%" \
-    "$(git -C "$repo" diff -M --name-status "$baseline" HEAD -- "config/$f" "$app/config/$f")" \
-    "$(printf 'R100\tconfig/%s\t%s/config/%s' "$f" "$app" "$f")"
+  rename=$(git -C "$repo" diff -M --name-status "$baseline" HEAD -- "config/$f" "$app/config/$f")
+  if [ -n "$(ported_blob "$f")" ]; then
+    check "git diff -M shows config/$f renamed" "$(printf '%s' "$rename" | sed -E 's/^R[0-9]+\t/R\t/')" "$(printf 'R\tconfig/%s\t%s/config/%s' "$f" "$app" "$f")"
+  else
+    check "git diff -M shows config/$f renamed at 100%" "$rename" "$(printf 'R100\tconfig/%s\t%s/config/%s' "$f" "$app" "$f")"
+  fi
 done
 
 check "$app/config holds exactly the twelve moved files" \
