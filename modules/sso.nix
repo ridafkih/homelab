@@ -110,6 +110,7 @@ let
         userinfoUrl = "${pocketIdLocal}/api/oidc/userinfo";
         redirectUrl = "${tinyauthUrl}/api/oauth/callback/pocketid";
         scopes = [ "openid" "email" "profile" "groups" ];
+        whitelist = [ "/.*/" ];
       };
     };
     apps = lib.mapAttrs (name: group: {
