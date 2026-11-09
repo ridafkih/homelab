@@ -18,6 +18,8 @@ let
 
   dataMounts = [ "/mnt/disk1" "/mnt/disk2" ];
 
+  dumpedStacks = [ "homelab-compose.service" "openseo-compose.service" ];
+
   databaseDumps = pkgs.writeShellApplication {
     name = "homelab-db-dumps";
     runtimeInputs = [ config.virtualisation.docker.package pkgs.coreutils pkgs.gnugrep pkgs.sqlite ];
@@ -151,7 +153,8 @@ in
 
     systemd.services = {
       restic-backups-disk1 = lib.recursiveUpdate unit {
-        wants = [ "restic-backups-disk2.service" ];
+        wants = [ "restic-backups-disk2.service" ] ++ dumpedStacks;
+        after = unit.after ++ dumpedStacks;
       };
       restic-backups-disk2 = lib.recursiveUpdate unit {
         after = unit.after ++ [ "restic-backups-disk1.service" ];
