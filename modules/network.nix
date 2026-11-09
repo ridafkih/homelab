@@ -1,6 +1,7 @@
 { config, ... }:
 {
   boot.kernel.sysctl."net.ipv4.tcp_slow_start_after_idle" = 0;
+  boot.kernel.sysctl."net.ipv4.tcp_rto_min_us" = 40000;
 
   networking.useNetworkd = true;
   networking.useDHCP = false;
