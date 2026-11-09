@@ -161,6 +161,9 @@ let
     dumpDirFromBackupModule = cfg.homelab.backup.dumpDir == "/var/backups/homelab-db" && host.options.homelab.backup.dumpDir.readOnly;
     dumpsOnlyInDisk1 = (job "disk1").backupPrepareCommand != null && (job "disk2").backupPrepareCommand == null;
     disk1WantsDisk2 = builtins.elem "restic-backups-disk2.service" ((service "disk1").wants or [ ]);
+    disk1DumpsAfterStacks =
+      includesAll [ "homelab-compose.service" "openseo-compose.service" ] ((service "disk1").wants or [ ])
+      && includesAll [ "homelab-compose.service" "openseo-compose.service" ] ((service "disk1").after or [ ]);
     disk2AfterDisk1 = builtins.elem "restic-backups-disk1.service" ((service "disk2").after or [ ]);
     disk1NotAfterDisk2 = !(builtins.elem "restic-backups-disk2.service" ((service "disk1").after or [ ]));
     disk2NotRequiringDisk1 =
