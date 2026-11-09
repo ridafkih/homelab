@@ -48,7 +48,7 @@ let
 
   mkComposeUnit = name: project: {
     description = "Docker Compose project ${name}";
-    wantedBy = [ "multi-user.target" ];
+    wantedBy = [ "multi-user.target" "data.mount" ];
     after = [ "docker.service" "network-online.target" ];
     requires = [ "docker.service" ];
     wants = [ "network-online.target" ];
@@ -132,7 +132,7 @@ in
           description = "Reload Caddy when the Caddyfile changes";
           after = [ (unitOf "homelab") ];
           requires = [ (unitOf "homelab") ];
-          wantedBy = [ "multi-user.target" ];
+          wantedBy = [ "multi-user.target" (unitOf "homelab") ];
           restartTriggers = [ ../apps/caddy/Caddyfile ];
           path = [ docker ];
           serviceConfig = {

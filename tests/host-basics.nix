@@ -18,9 +18,9 @@ let
   defaultSchedule = "-a -n standby,q -s (S/../.././02|L/../01/./03)";
   smartdLines = [
     "DEFAULT ${defaultSchedule}"
-    "/dev/disk/by-id/ata-ST12000VN0008-2YS101_ZRT2GJKS -d sat -o on -S on -W 4,50,60"
-    "/dev/disk/by-id/ata-ST16000NT001-3LV101_ZRS26FDA -d sat -o on -S on -W 4,50,60"
-    "/dev/disk/by-id/ata-ST2000DM006-2DM164_Z4Z9LD0N -d sat -o on -S on -W 4,50,60"
+    "/dev/disk/by-id/ata-ST12000VN0008-2YS101_ZRT2GJKS -d removable -d sat -o on -S on -W 4,50,60"
+    "/dev/disk/by-id/ata-ST16000NT001-3LV101_ZRS26FDA -d removable -d sat -o on -S on -W 4,50,60"
+    "/dev/disk/by-id/ata-ST2000DM006-2DM164_Z4Z9LD0N -d removable -d sat -o on -S on -W 4,50,60"
     "/dev/disk/by-id/nvme-WD_BLACK_SN850X_2000GB_23523B800268 -d nvme -W 4,75,82"
   ];
 

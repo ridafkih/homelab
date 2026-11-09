@@ -11,7 +11,7 @@ let
   storageModule =
     if builtins.pathExists storageModulePath then storageModulePath else throw "modules/storage.nix is missing";
 
-  diskOptions = [ "nofail" "noatime" "x-systemd.device-timeout=15s" ];
+  diskOptions = [ "nofail" "noatime" "x-systemd.device-timeout=10min" "x-systemd.device-bound" ];
   dataOptions = [
     "allow_other"
     "cache.files=auto-full"
@@ -23,6 +23,8 @@ let
     "moveonenospc=true"
     "x-systemd.requires=/mnt/disk1"
     "x-systemd.requires=/mnt/disk2"
+    "x-systemd.wanted-by=mnt-disk1.mount"
+    "x-systemd.wanted-by=mnt-disk2.mount"
     "nofail"
     "fsname=mergerfs"
   ];
@@ -133,6 +135,14 @@ let
     dockerRequiresMounts = includesAll guardedPaths (listOf (docker.unitConfig.RequiresMountsFor or [ ]));
     dockerBindsToMounts = includesAll guardedUnits (docker.bindsTo or [ ]);
     dockerAfterMounts = includesAll guardedUnits (docker.after or [ ]);
+    dockerStartsWithData = builtins.elem "data.mount" (docker.wantedBy or [ ]);
+    disksMountOnArrival =
+      lib.hasInfix ''ENV{ID_FS_UUID}=="${disk1Uuid}", ENV{SYSTEMD_WANTS}+="data-remount.service"'' cfg.services.udev.extraRules
+      && lib.hasInfix ''ENV{ID_FS_UUID}=="${disk2Uuid}", ENV{SYSTEMD_WANTS}+="data-remount.service"'' cfg.services.udev.extraRules;
+    remountWaitsForStaleMounts = includesAll [ "mnt-disk1.mount" "mnt-disk2.mount" ] (cfg.systemd.services.data-remount.after or [ ]);
+    smartdWaitsForDisks =
+      includesAll [ "mnt-disk1.mount" "mnt-disk2.mount" ] (cfg.systemd.services.smartd.after or [ ])
+      && includesAll [ "mnt-disk1.mount" "mnt-disk2.mount" ] (cfg.systemd.services.smartd.wantedBy or [ ]);
     storageLeavesDockerOff =
       storageOnly.config.virtualisation.docker.enable == false
       && !(storageOnly.config.systemd.services ? docker);
