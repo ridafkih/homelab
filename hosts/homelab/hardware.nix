@@ -9,6 +9,7 @@
     "sd_mod"
   ];
   boot.kernelModules = [ "kvm-amd" ];
+  boot.blacklistedKernelModules = [ "snd_usb_audio" ];
   boot.kernelPackages = pkgs.linuxPackages_6_18;
 
   boot.loader.systemd-boot = {
