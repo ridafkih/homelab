@@ -60,6 +60,7 @@ let
     "${project}StartTimeoutOneHour" = builtins.elem ((service project).TimeoutStartSec or null) [ "1h" "60min" "3600" 3600 ];
     "${project}StopTimeoutFiveMinutes" = builtins.elem ((service project).TimeoutStopSec or null) [ "5min" "5m" "300" 300 ];
     "${project}WantedAtBoot" = builtins.elem "multi-user.target" (field project "wantedBy");
+    "${project}StartsWithData" = builtins.elem "data.mount" (field project "wantedBy");
     "${project}AfterDocker" = includesAll [ "docker.service" "network-online.target" ] (field project "after");
     "${project}RequiresDocker" = builtins.elem "docker.service" (field project "requires");
     "${project}WantsNetworkOnline" = builtins.elem "network-online.target" (field project "wants");

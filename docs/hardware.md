@@ -46,7 +46,13 @@ The hub and its three `uas` devices hang off the 10000M root hub, and the count 
 
 Only the NVMe is in disko (`hosts/homelab/disks.nix`), and an eval assertion refuses any other target. Nothing in this repo ever formats or partitions the data disks.
 
-Both data disks mount by UUID with `nofail`, `noatime` and a 15 second device timeout, and `/data` is a mergerfs pool over them (`category.create=mfs`, so new files land on whichever disk has more free space). Docker is bound to all three mounts and won't start without them ([0008](decisions/0008-storage.md)).
+Both data disks mount by UUID with `nofail`, `noatime`, a 10 minute device timeout and `x-systemd.device-bound`, and `/data` is a mergerfs pool over them (`category.create=mfs`, so new files land on whichever disk has more free space). Docker is bound to all three mounts and won't start without them ([0008](decisions/0008-storage.md)).
+
+The disks mount whenever they appear, not only at boot. A udev rule matches each disk by filesystem UUID and starts `data-remount.service`, which starts `/data`; `/data` pulls in both disk mounts, and Docker and the Compose units are wanted by `/data`. Each disk mount is bound to its device (`x-systemd.device-bound`), so a disk that drops off USB stops its mount, and Docker and the stacks with it, instead of leaving them on a dead device. When it comes back, even a second later under a new `sdX` name, `data-remount` runs after that stop has finished (systemd always runs a stop job before a start job between ordered units) and brings the chain back up. smartd and the nightly backup wait for the disks too.
+
+## The onboard USB audio stalls udev
+
+The board's USB audio device (`0b05:1a5c`, "USB Audio" on bus 1) answers `snd-usb-audio`'s sample-rate queries with timeouts, so the driver's probe takes 6 to 25 seconds. Until it finishes, udev doesn't finish any other device, the data disks' partitions included: on every boot the disks became visible to systemd only once `registered new interface driver snd-usb-audio` was logged. On 2026-11-09 it took 25 seconds, past the old 15 second device timeout, and Docker and every Compose project failed with "Dependency failed". The box has no use for audio, so `snd_usb_audio` is blacklisted in `hosts/homelab/hardware.nix`.
 
 What lives where on the pool:
 
