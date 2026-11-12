@@ -180,6 +180,19 @@
         }
     }
 
+    @hyper host hyper.{env.DOMAIN}
+    handle @hyper {
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+        handle @outside_tailnet {
+            abort
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3912
+        }
+    }
+
     @windows host windows.{env.DOMAIN}
     handle @windows {
         handle {

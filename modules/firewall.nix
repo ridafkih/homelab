@@ -5,6 +5,9 @@
     trustedInterfaces = [ "tailscale0" ];
     allowedTCPPorts = [ 22 53 80 443 3000 3389 4317 4318 4327 4328 8006 ];
     allowedUDPPorts = [ 53 3389 ];
+    extraCommands = ''
+      iptables -I nixos-fw -s 172.16.0.0/12 -p tcp --dport 3912 -j nixos-fw-accept
+    '';
   };
 
   assertions = [
