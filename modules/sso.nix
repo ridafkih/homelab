@@ -12,6 +12,7 @@ let
   pocketIdPort = 1411;
   tinyauthPort = 3820;
   dockerNetworks = "172.16.0.0/12";
+  everyPocketIdUser = "/.*/";
   pocketIdUrl = urlOf "id";
   pocketIdLocal = "http://127.0.0.1:${toString pocketIdPort}";
   tinyauthUrl = urlOf "auth";
@@ -110,12 +111,15 @@ let
         userinfoUrl = "${pocketIdLocal}/api/oidc/userinfo";
         redirectUrl = "${tinyauthUrl}/api/oauth/callback/pocketid";
         scopes = [ "openid" "email" "profile" "groups" ];
-        whitelist = [ "/.*/" ];
+        whitelist = [ everyPocketIdUser ];
       };
     };
     apps = lib.mapAttrs (name: group: {
       config.domain = hostOf name;
-      oauth.groups = group;
+      oauth = {
+        whitelist = everyPocketIdUser;
+        groups = group;
+      };
     }) gatedApps;
   });
 
