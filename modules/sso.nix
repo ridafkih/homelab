@@ -83,6 +83,7 @@ let
     adguard = "admins";
     signoz = "admins";
     open-seo = "admins";
+    hyper = "admins";
     windows = "admins";
     jellyseerr = "media";
   };
