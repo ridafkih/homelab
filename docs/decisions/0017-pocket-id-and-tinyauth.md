@@ -31,5 +31,6 @@ Authentik (four containers and its own Cloudflare tunnel) only served Tailscale'
 | Sonarr, Radarr, Prowlarr | Tinyauth, `admins` | External authentication; API calls with a key skip the gate |
 | Bazarr, qBittorrent, AdGuard, SigNoz, OpenSEO, Windows viewer | Tinyauth, `admins` | their own logins stay where they have one; SigNoz's API key and OpenSEO's `/mcp` skip the gate |
 | Seerr | Tinyauth, `media` | no OIDC release yet; its Jellyfin login stays behind the gate, API calls with a key skip it |
+| Worm fleet dashboard (`worm.rida.sh`) | its own passkeys, no Tinyauth | tailnet only; Caddy proxies to `tailscale serve` on mini-worm port 4470, so a second gate would only break its passkey ceremony and event stream |
 
 A request skips the gate only when it carries an API key and targets an API path, so a bogus key reaches the app's own key check and nothing else. Port 8006 stays open on the LAN as 0007 decided; `windows.rida.sh` is the gated way in.

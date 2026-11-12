@@ -193,6 +193,23 @@
         }
     }
 
+    @worm host worm.{env.DOMAIN}
+    handle @worm {
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+        handle @outside_tailnet {
+            abort
+        }
+
+        handle {
+            reverse_proxy https://100.76.193.51:4470 {
+                flush_interval -1
+                transport http {
+                    tls_server_name mini-worm.worm-godzilla.ts.net
+                }
+            }
+        }
+    }
+
     @windows host windows.{env.DOMAIN}
     handle @windows {
         handle {
