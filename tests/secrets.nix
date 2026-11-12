@@ -12,6 +12,7 @@ let
     [ "authentik.env" "POSTGRES_PASSWORD" "authentik/AUTHENTIK_POSTGRESQL__PASSWORD" "deny" ]
     [ "authentik.env" "POSTGRES_USER" "authentik/AUTHENTIK_POSTGRESQL__USER" "deny" ]
     [ "caddy.env" "CLOUDFLARE_API_TOKEN" "caddy/CADDY_CLOUDFLARE_API_TOKEN" "deny" ]
+    [ "caddy.env" "WORM_TLS_SERVER_NAME" "caddy/CADDY_WORM_TLS_SERVER_NAME" "deny" ]
     [ "openseo.env" "CONTEXT_API_KEY" "openseo/CONTEXT_API_KEY" "allow" ]
     [ "openseo.env" "DATAFORSEO_API_KEY" "openseo/DATAFORSEO_API_KEY" "deny" ]
     [ "openseo.env" "GOOGLE_CLIENT_ID" "openseo/GOOGLE_CLIENT_ID" "deny" ]

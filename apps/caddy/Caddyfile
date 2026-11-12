@@ -204,7 +204,7 @@
             reverse_proxy https://100.76.193.51:4470 {
                 flush_interval -1
                 transport http {
-                    tls_server_name mini-worm.worm-godzilla.ts.net
+                    tls_server_name {env.WORM_TLS_SERVER_NAME}
                 }
             }
         }
