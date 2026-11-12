@@ -1,0 +1,21 @@
+name: windows
+
+services:
+  windows:
+    image: dockurr/windows:latest@sha256:3633f055f31aadf76bb650b1ca86897ab45b76ad8eb2cf81e86389ace5eb45ac
+    container_name: windows11
+    environment:
+      VERSION: "11"
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8006:8006
+      - 3389:3389/tcp
+      - 3389:3389/udp
+    volumes:
+      - /data/windows:/storage
+    restart: always
+    stop_grace_period: 2m

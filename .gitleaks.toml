@@ -1,0 +1,8 @@
+title = "homelab"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Throwaway age identity that only decrypts the dummy values in secrets/vm.yaml"
+paths = ['''^secrets/test-age\.key$''']
