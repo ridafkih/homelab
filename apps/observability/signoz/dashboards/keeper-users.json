@@ -1,0 +1,1187 @@
+{
+  "name": "keeper-users",
+  "schemaVersion": "v6",
+  "tags": [
+    {
+      "key": "area",
+      "value": "keeper"
+    },
+    {
+      "key": "area",
+      "value": "observability"
+    },
+    {
+      "key": "area",
+      "value": "production"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Users & Growth",
+      "description": "Observed product activity derived from Keeper.sh logs. This dashboard does not claim authoritative registrations, total accounts, subscriptions, or retention because those require database/business events that are not currently exported. Plan filtering applies only where telemetry carries user.plan."
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "plan",
+          "display": {
+            "name": "plan",
+            "description": "User plan (user.plan)"
+          },
+          "allowMultiple": true,
+          "allowAllValue": true,
+          "sort": "none",
+          "defaultValue": [
+            "free",
+            "pro"
+          ],
+          "plugin": {
+            "kind": "signoz/CustomVariable",
+            "spec": {
+              "customValue": "free,pro"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "api_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Observed API Users",
+            "description": "Distinct identified users seen in keeper-api completions during the selected range. This is observed activity, not total accounts."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND mapContains(attributes_number, 'status_code') AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan')))",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "new_accounts": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "New-Account Activity Seen",
+            "description": "Distinct users who made an API request while account_age_days=0. This is not an authoritative registration count."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND JSONExtractRaw(attributes_string['user'], 'account_age_days') = '0' AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan')))",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "import_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Users Completing Provider Imports",
+            "description": "Distinct users with successful OAuth account-import completions (operation oauth-account-import). These events carry userId but no plan label, so the plan filter does not apply."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(attributes_string['userId']) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND JSONExtractString(attributes_string['operation'], 'name') = 'oauth-account-import' AND attributes_string['outcome'] = 'success' AND attributes_string['userId'] != ''",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "sync_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Observed Sync Users",
+            "description": "Distinct users represented in worker sync telemetry during the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan')))",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "config_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Users Changing Configuration",
+            "description": "Distinct users performing source/account/token/settings writes."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^((POST|PUT|PATCH|DELETE) /api/(accounts|sources|ical|tokens).*)$') AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan')))",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "token_users": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Token-Authenticated Users",
+            "description": "Distinct observed users authenticating with API or MCP tokens."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND match(JSONExtractString(attributes_string['auth'], 'method'), '^(api_token|mcp_token)$') AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan')))",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "daily_api": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Observed Daily API-Active Users",
+            "description": "Distinct identified API users per day by observed plan. This is DAU from telemetry, not billing/database truth. Daily buckets are UTC calendar days (Grafana used a rolling 24h window)."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['user'], 'plan') AS user_plan, uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND mapContains(attributes_number, 'status_code') AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, user_plan ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{user_plan}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "daily_sync": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Observed Daily Sync-Active Users",
+            "description": "Distinct users appearing in worker sync telemetry per day. Daily buckets are UTC calendar days (Grafana used a rolling 24h window)."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['user'], 'plan') AS user_plan, uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-worker' AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, user_plan ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{user_plan}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "daily_new": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Daily New-Account Activity Seen",
+            "description": "Distinct users observed per day while account_age_days=0. It is a product-activity proxy, not a registration event. Daily buckets are UTC calendar days (Grafana used a rolling 24h window)."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['user'], 'plan') AS user_plan, uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND JSONExtractRaw(attributes_string['user'], 'account_age_days') = '0' AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, user_plan ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{user_plan}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "daily_config": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Daily Configuration-Active Users",
+            "description": "Distinct users per day changing accounts, sources, destinations, ICS settings, or tokens. Daily buckets are UTC calendar days (Grafana used a rolling 24h window)."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['user'], 'plan') AS user_plan, uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^((POST|PUT|PATCH|DELETE) /api/(accounts|sources|ical|tokens).*)$') AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, user_plan ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{user_plan}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "config_hourly": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Configuration Operations per Hour",
+            "description": "Product configuration attempts by normalized operation and outcome. Heavy users can contribute multiple attempts."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(3600, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['operation'], 'name') AS operation_name, attributes_string['outcome'] AS outcome, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^((POST|PUT|PATCH|DELETE) /api/(accounts|sources|ical|tokens).*)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, operation_name, outcome ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{operation_name}} · {{outcome}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "imports_daily": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Provider Import Completions per Day",
+            "description": "API-owned provider imports (operation oauth-account-import) by provider and outcome. Plan is unavailable on these background events."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, if(startsWith(attributes_string['provider'], '{'), '', attributes_string['provider']) AS provider, attributes_string['outcome'] AS outcome, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND JSONExtractString(attributes_string['operation'], 'name') = 'oauth-account-import' GROUP BY ts, provider, outcome ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{provider}} · {{outcome}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "daily_auth": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Daily Users by Authentication Method",
+            "description": "Distinct observed users per day per authentication method. Daily buckets are UTC calendar days (Grafana used a rolling 24h window)."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['auth'], 'method') AS auth_method, uniqExact(JSONExtractString(attributes_string['user'], 'id')) AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND JSONExtractString(attributes_string['auth'], 'method') != '' AND JSONExtractString(attributes_string['user'], 'id') != '' AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY ts, auth_method ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{auth_method}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "feed_hourly": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Calendar Feed Responses per Hour",
+            "description": "Public ICS feed delivery responses. These requests generally have no identified user or plan."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(3600, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, attributes_string['outcome'] AS outcome, toString(toInt64(attributes_number['status_code'])) AS status_code, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND JSONExtractString(attributes_string['operation'], 'name') = 'GET /api/cal/[identifier]' GROUP BY ts, outcome, status_code ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{outcome}} · HTTP {{status_code}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "passkey_daily": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Passkey Flow Operations per Day",
+            "description": "Passkey option, verification, registration, and management endpoint completions; not all are authentication attempts."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "linear",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": null,
+                "softMax": null,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toStartOfInterval(fromUnixTimestamp64Nano(timestamp), toIntervalSecond(greatest(86400, intDiv({{.end_timestamp}} - {{.start_timestamp}}, 200)))) AS ts, JSONExtractString(attributes_string['operation'], 'name') AS operation_name, attributes_string['outcome'] AS outcome, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(.*passkey.*)$') GROUP BY ts, operation_name, outcome ORDER BY ts",
+                          "disabled": false,
+                          "legend": "{{operation_name}} · {{outcome}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "config_actions": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Configuration Actions in Selected Range",
+            "description": "Range-total successful/error product configuration actions by normalized operation."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT JSONExtractString(attributes_string['operation'], 'name') AS operation_name, attributes_string['outcome'] AS outcome, count() AS value FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^((POST|PUT|PATCH|DELETE) /api/(accounts|sources|ical|tokens).*)$') AND (hasAll({{.plan}}, ['free', 'pro']) OR has({{.plan}}, JSONExtractString(attributes_string['user'], 'plan'))) GROUP BY operation_name, outcome ORDER BY value DESC LIMIT 15",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      },
+      "recent_failures": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Recent User-Facing Product Failures",
+            "description": "Safe normalized summary of auth/configuration/API errors. Raw paths, tokens, and error stacks are omitted."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": null,
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "clickhouse_sql",
+                        "spec": {
+                          "name": "A",
+                          "query": "SELECT toString(fromUnixTimestamp64Nano(timestamp)) AS time, JSONExtractString(attributes_string['operation'], 'name') AS op, toString(toInt64(attributes_number['status_code'])) AS status, JSONExtractString(attributes_string['error'], 'slug') AS slug, JSONExtractString(attributes_string['user'], 'id') AS user, JSONExtractString(attributes_string['user'], 'plan') AS plan FROM signoz_logs.distributed_logs_v2 WHERE ts_bucket_start BETWEEN {{.start_timestamp}} - 1800 AND {{.end_timestamp}} AND timestamp BETWEEN {{.start_timestamp_nano}} AND {{.end_timestamp_nano}} AND resources_string['service.name'] = 'keeper-api' AND attributes_string['outcome'] = 'error' AND match(JSONExtractString(attributes_string['operation'], 'name'), '^(.*(auth|accounts|sources|ical|tokens).*)$') ORDER BY timestamp DESC LIMIT 200",
+                          "disabled": false,
+                          "legend": ""
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": null
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/api_users"
+              }
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/new_accounts"
+              }
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/import_users"
+              }
+            },
+            {
+              "x": 0,
+              "y": 3,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/sync_users"
+              }
+            },
+            {
+              "x": 4,
+              "y": 3,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/config_users"
+              }
+            },
+            {
+              "x": 8,
+              "y": 3,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/token_users"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/daily_api"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/daily_sync"
+              }
+            },
+            {
+              "x": 0,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/daily_new"
+              }
+            },
+            {
+              "x": 6,
+              "y": 12,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/daily_config"
+              }
+            },
+            {
+              "x": 0,
+              "y": 18,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/config_hourly"
+              }
+            },
+            {
+              "x": 6,
+              "y": 18,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/imports_daily"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/daily_auth"
+              }
+            },
+            {
+              "x": 6,
+              "y": 24,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/feed_hourly"
+              }
+            },
+            {
+              "x": 0,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/passkey_daily"
+              }
+            },
+            {
+              "x": 6,
+              "y": 30,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/config_actions"
+              }
+            },
+            {
+              "x": 0,
+              "y": 36,
+              "width": 12,
+              "height": 9,
+              "content": {
+                "$ref": "#/spec/panels/recent_failures"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "7d",
+    "refreshInterval": "5m",
+    "links": null
+  }
+}

@@ -1,0 +1,233 @@
+(cloudflare) {
+    tls {
+        propagation_timeout -1
+        propagation_delay 1m
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+}
+
+(pocket-id) {
+    reverse_proxy {env.HOST_MACHINE_HOSTNAME}:1411 {
+        header_up X-Forwarded-Proto https
+    }
+}
+
+(tinyauth) {
+    forward_auth {env.HOST_MACHINE_HOSTNAME}:3820 {
+        uri /api/auth/caddy
+        copy_headers Remote-User Remote-Email Remote-Name Remote-Groups
+    }
+}
+
+*.{env.DOMAIN}, {env.DOMAIN} {
+    import cloudflare
+    
+    @jellyfin host jellyfin.{env.DOMAIN}
+    handle @jellyfin {
+        reverse_proxy jellyfin:8096
+    }
+
+    @jellyseerr host jellyseerr.{env.DOMAIN}
+    handle @jellyseerr {
+        @jellyseerr_api {
+            path /api/v1/*
+            header X-Api-Key *
+        }
+        handle @jellyseerr_api {
+            reverse_proxy jellyseerr:5055
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy jellyseerr:5055
+        }
+    }
+    
+    @openwebui host open-webui.{env.DOMAIN}
+    handle @openwebui {
+        reverse_proxy open-webui:8080
+    }
+    
+    @adguard host adguard.{env.DOMAIN}
+    handle @adguard {
+        handle {
+            import tinyauth
+            reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3000
+        }
+    }
+    
+    @pocketid host id.{env.DOMAIN}
+    handle @pocketid {
+        import pocket-id
+    }
+
+    @tinyauth host auth.{env.DOMAIN}
+    handle @tinyauth {
+        reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3820
+    }
+
+    @authentik host authentik.{env.DOMAIN}
+    handle @authentik {
+        reverse_proxy authentik-server:9000
+    }
+    
+    @prowlarr host prowlarr.{env.DOMAIN}
+    handle @prowlarr {
+        handle {
+            import tinyauth
+            reverse_proxy prowlarr:9696
+        }
+    }
+    
+    @sonarr host sonarr.{env.DOMAIN}
+    handle @sonarr {
+        @sonarr_api expression `path('/api/*', '/feed/*', '/signalr/*') && ({http.request.header.X-Api-Key} != "" || {http.request.uri.query.apikey} != "" || {http.request.uri.query.access_token} != "")`
+        handle @sonarr_api {
+            reverse_proxy sonarr:8989
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy sonarr:8989
+        }
+    }
+    
+    @radarr host radarr.{env.DOMAIN}
+    handle @radarr {
+        @radarr_api expression `path('/api/*', '/feed/*', '/signalr/*') && ({http.request.header.X-Api-Key} != "" || {http.request.uri.query.apikey} != "" || {http.request.uri.query.access_token} != "")`
+        handle @radarr_api {
+            reverse_proxy radarr:7878
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy radarr:7878
+        }
+    }
+    
+    @bazarr host bazarr.{env.DOMAIN}
+    handle @bazarr {
+        handle {
+            import tinyauth
+            reverse_proxy bazarr:6767
+        }
+    }
+    
+    @qbittorrent host qbittorrent.{env.DOMAIN}
+    handle @qbittorrent {
+        handle {
+            import tinyauth
+            reverse_proxy qbittorrent:8080
+        }
+    }
+
+    @qui host qui.{env.DOMAIN}
+    handle @qui {
+        reverse_proxy qui:7476
+    }
+
+    @seafile host seafile.{env.DOMAIN}
+    handle @seafile {
+        handle_path /socket.io/* {
+            rewrite * /socket.io{uri}
+            reverse_proxy seadoc:80
+        }
+
+        handle_path /sdoc-server/* {
+            rewrite * {uri}
+            reverse_proxy seadoc:80
+        }
+
+        handle {
+            reverse_proxy seafile:80
+        }
+    }
+
+    @signoz host signoz.{env.DOMAIN}
+    handle @signoz {
+        @signoz_api {
+            path /api/*
+            header SIGNOZ-API-KEY *
+        }
+        handle @signoz_api {
+            reverse_proxy signoz:8080
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy signoz:8080
+        }
+    }
+
+    @openseo host open-seo.{env.DOMAIN}
+    handle @openseo {
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+        handle @outside_tailnet {
+            abort
+        }
+
+        @openseo_mcp {
+            path /mcp /mcp/*
+            remote_ip 100.76.193.51
+        }
+        handle @openseo_mcp {
+            reverse_proxy open-seo:80
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy open-seo:80
+        }
+    }
+
+    @hyper host hyper.{env.DOMAIN}
+    handle @hyper {
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+        handle @outside_tailnet {
+            abort
+        }
+
+        handle {
+            import tinyauth
+            reverse_proxy {env.HOST_MACHINE_HOSTNAME}:3912
+        }
+    }
+
+    @worm host worm.{env.DOMAIN}
+    handle @worm {
+        @outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+        handle @outside_tailnet {
+            abort
+        }
+
+        handle {
+            reverse_proxy https://100.76.193.51:4470 {
+                flush_interval -1
+                transport http {
+                    tls_server_name mini-worm.worm-godzilla.ts.net
+                }
+            }
+        }
+    }
+
+    @windows host windows.{env.DOMAIN}
+    handle @windows {
+        handle {
+            import tinyauth
+            reverse_proxy {env.HOST_MACHINE_HOSTNAME}:8006
+        }
+    }
+}
+
+http://id.{env.DOMAIN} {
+    import pocket-id
+}
+
+http://{env.DOMAIN} {
+    handle /.well-known/webfinger {
+        header Content-Type application/json
+        respond `{"links":[{"href":"https://id.{env.DOMAIN}","rel":"http://openid.net/specs/connect/1.0/issuer"}],"subject":"acct:rida@{env.DOMAIN}"}` 200
+    }
+
+    respond "Not Found" 404
+}
