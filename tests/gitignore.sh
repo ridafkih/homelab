@@ -29,7 +29,8 @@ for path in \
   host/etc/fstab.bak \
   result \
   result-1 \
-  a.qcow2; do
+  a.qcow2 \
+  docs/decisions/0001-x.md; do
   expect_ignored "$path"
 done
 
