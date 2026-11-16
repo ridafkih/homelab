@@ -1,7 +1,7 @@
 #!/bin/sh
 set -u
 
-baseline=9af811a
+baseline=7c281b4
 edge_files="apps/caddy/compose.yaml apps/authentik/compose.yaml apps/ridash/compose.yaml"
 
 for tool in docker-compose jq git awk diff; do

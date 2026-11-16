@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-baseline=9af811a
+baseline=7c281b4
 adguard_image='adguard/adguardhome'
 adguard_digest='sha256:aba9e3bf0613be3ba3755e1fc311b126e2c24bec25e18b6483894a88283074f0'
 alpine_image='alpine'

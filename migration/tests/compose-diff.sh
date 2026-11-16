@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-baseline=9af811a
+baseline=7c281b4
 digest=sha256:a5d0ce49aa801d475da48f8cb163c354ab95cab073cd3c138bd458fc8257fbf1
 
 for tool in docker-compose jq git diff; do

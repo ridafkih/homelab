@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-baseline=9af811a
+baseline=7c281b4
 media_services="prowlarr sonarr radarr bazarr qbittorrent qui jellyseerr"
 all_services="jellyfin $media_services"
 

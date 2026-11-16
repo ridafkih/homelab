@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-baseline=9af811a
+baseline=7c281b4
 app=apps/seafile/compose.yaml
 template=seafile.env
 live_dir=/home/rida/homelab

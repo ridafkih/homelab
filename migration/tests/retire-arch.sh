@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
-baseline=9af811a
+baseline=7c281b4
 failures=0
 
 fail() {

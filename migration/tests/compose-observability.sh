@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-baseline=9af811a
+baseline=7c281b4
 app=apps/observability
 compose_file=$app/compose.yaml
 
