@@ -2,6 +2,7 @@
 let
   cfg = config.homelab;
   edge = cfg.cloudflareTunnelEdge;
+  r2 = cfg.cloudflareR2Endpoint;
 
   floor = { priority = 5300; selector = "unreachable"; };
 
@@ -67,8 +68,8 @@ let
         done < <(selectors "$family" "$priority")
       }
 
-      ${reconcile "-4" edge.ipv4}
-      ${reconcile "-6" edge.ipv6}
+      ${reconcile "-4" (edge.ipv4 ++ r2.ipv4)}
+      ${reconcile "-6" (edge.ipv6 ++ r2.ipv6)}
     '';
   };
 in

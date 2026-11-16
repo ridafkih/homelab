@@ -15,7 +15,9 @@ let
   hashChar = builtins.fromJSON ''"\u0023"'';
   shellDefault = builtins.fromJSON ''":\u002d"'';
 
-  edge = (lib.evalModules { modules = [ optionsModule ]; }).config.homelab.cloudflareTunnelEdge;
+  homelabDefaults = (lib.evalModules { modules = [ optionsModule ]; }).config.homelab;
+  edge = homelabDefaults.cloudflareTunnelEdge;
+  r2 = homelabDefaults.cloudflareR2Endpoint;
 
   evalWith = extra: lib.nixosSystem {
     modules = [
@@ -148,6 +150,8 @@ let
 
       edge4 = ${pyList edge.ipv4}
       edge6 = ${pyList edge.ipv6}
+      r2_4 = ${pyList r2.ipv4}
+      r2_6 = ${pyList r2.ipv6}
 
       def expected_rules(edges):
           rules = [f"5200: from all to {prefix} lookup main" for prefix in edges]
@@ -171,8 +175,8 @@ let
       def assert_rules_exact(context):
           four = our_rules("-4")
           six = our_rules("-6")
-          assert four == expected_rules(edge4), (context, four)
-          assert six == expected_rules(edge6), (context, six)
+          assert four == expected_rules(edge4 + r2_4), (context, four)
+          assert six == expected_rules(edge6 + r2_6), (context, six)
 
       def route_dev(command):
           out = homelab.succeed(command)
@@ -275,10 +279,16 @@ let
               assert_via("wg0", "-4", "1.1.1.1", extra)
               assert_via("wg0", "-4", "100.64.1.1", extra)
               assert_via("wan0", "-4", "198.41.192.7", extra)
+              for dest in r2_4:
+                  assert_via("wan0", "-4", dest, extra)
+              assert_via("wg0", "-4", "172.64.66.2", extra)
               assert_via("lan0", "-4", "10.0.0.5", extra)
           for extra in ["", from6]:
               assert_via("wg0", "-6", "2001:4860::8888", extra)
               assert_via("wan0", "-6", "2606:4700:a0::8", extra)
+              for dest in r2_6:
+                  assert_via("wan0", "-6", dest, extra)
+              assert_via("wg0", "-6", "2606:4700:113::2", extra)
               assert_via("lan0", "-6", "2001:db8:98::5", extra)
           assert_via("docker0", "-4", "172.17.0.2")
           assert_via("docker0", "-6", "fd00:d0c::2")
@@ -301,14 +311,18 @@ let
 
       def assert_down_state(context):
           for extra in ["", from4]:
-              for dest in ["1.1.1.1", "100.64.1.1", "172.31.255.1", "8.8.8.8"]:
+              for dest in ["1.1.1.1", "100.64.1.1", "172.31.255.1", "8.8.8.8", "172.64.66.2"]:
                   assert_unreachable("-4", dest, extra)
               assert_via("wan0", "-4", "198.41.192.7", extra)
+              for dest in r2_4:
+                  assert_via("wan0", "-4", dest, extra)
               assert_via("lan0", "-4", "10.0.0.5", extra)
           for extra in ["", from6]:
-              for dest in ["2001:4860::8888", "fd7a:115c:a1e0::5"]:
+              for dest in ["2001:4860::8888", "fd7a:115c:a1e0::5", "2606:4700:113::2"]:
                   assert_unreachable("-6", dest, extra)
               assert_via("wan0", "-6", "2606:4700:a0::8", extra)
+              for dest in r2_6:
+                  assert_via("wan0", "-6", dest, extra)
               assert_via("lan0", "-6", "2001:db8:98::5", extra)
           assert_via("docker0", "-4", "172.17.0.2")
           assert_via("docker0", "-6", "fd00:d0c::2")

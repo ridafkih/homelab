@@ -48,6 +48,22 @@ in
         ];
       };
     };
+    cloudflareR2Endpoint = {
+      ipv4 = mkOption {
+        type = types.listOf types.str;
+        default = [
+          "172.64.66.1"
+          "172.64.190.1"
+        ];
+      };
+      ipv6 = mkOption {
+        type = types.listOf types.str;
+        default = [
+          "2606:4700:113::1"
+          "2606:4700:2ff9::1"
+        ];
+      };
+    };
     gpu.enable = mkOption {
       type = types.bool;
       default = true;

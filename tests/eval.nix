@@ -77,6 +77,14 @@ let
       "2606:4700:a8::/48"
       "2606:4700:a9::/48"
     ];
+    cloudflareR2Ipv4 = cfg.homelab.cloudflareR2Endpoint.ipv4 == [
+      "172.64.66.1"
+      "172.64.190.1"
+    ];
+    cloudflareR2Ipv6 = cfg.homelab.cloudflareR2Endpoint.ipv6 == [
+      "2606:4700:113::1"
+      "2606:4700:2ff9::1"
+    ];
     gpuEnabled = cfg.homelab.gpu.enable == true;
     unfreeAllowDefaultEmpty = opts.homelab.unfreeAllow.default == [ ];
     unfreeAllowIsStringList = opts.homelab.unfreeAllow.type.name == "listOf";
