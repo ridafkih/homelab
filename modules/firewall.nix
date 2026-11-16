@@ -1,4 +1,12 @@
-{ config, ... }:
+{ config, lib, ... }:
+let
+  committedEnv = builtins.listToAttrs (
+    map
+      (line: let parts = lib.splitString "=" line; in lib.nameValuePair (builtins.head parts) (lib.concatStringsSep "=" (builtins.tail parts)))
+      (builtins.filter (line: line != "") (lib.splitString "\n" (builtins.readFile ../homelab.env)))
+  );
+  hyperAdminPort = 3912;
+in
 {
   networking.firewall = {
     enable = true;
@@ -6,7 +14,7 @@
     allowedTCPPorts = [ 22 53 80 443 3000 3389 4317 4318 4327 4328 8006 ];
     allowedUDPPorts = [ 53 3389 ];
     extraCommands = ''
-      iptables -I nixos-fw -s 172.16.0.0/12 -p tcp --dport 3912 -j nixos-fw-accept
+      iptables -I nixos-fw -i ${committedEnv.HYPER_ADMIN_BRIDGE} -s ${committedEnv.HYPER_ADMIN_PROXY_ADDRESS} -p tcp --dport ${toString hyperAdminPort} -j nixos-fw-accept
     '';
   };
 

@@ -357,7 +357,7 @@ if [ -f "$work/homelab.env" ]; then
   check "homelab.env has no HOMELAB_DIR" "$(grep -c '^HOMELAB_DIR=' "$env_file" || true)" "0"
   check "homelab.env lines are all KEY=value" "$(grep -cvE '^[A-Z][A-Z0-9_]*=[^ $]+$' "$env_file" || true)" "0"
   check "homelab.env has no duplicate keys" "$(cut -d= -f1 "$env_file" | sort | uniq -d | tr '\n' ' ')" ""
-  allowed="AUTHENTIK_POSTGRESQL__HOST AUTHENTIK_POSTGRESQL__NAME AUTHENTIK_REDIS__HOST CADDY_DOMAIN CADDY_HOST_MACHINE_HOSTNAME HOMELAB_DATA_DIR HOMELAB_SECRETS_DIR SEAFILE_DATA_PATH"
+  allowed="AUTHENTIK_POSTGRESQL__HOST AUTHENTIK_POSTGRESQL__NAME AUTHENTIK_REDIS__HOST CADDY_DOMAIN CADDY_HOST_MACHINE_HOSTNAME HOMELAB_DATA_DIR HOMELAB_SECRETS_DIR HYPER_ADMIN_BRIDGE HYPER_ADMIN_GATEWAY HYPER_ADMIN_PROXY_ADDRESS HYPER_ADMIN_SUBNET SEAFILE_DATA_PATH"
   while IFS='=' read -r key _; do
     case " $allowed " in
       *" $key "*) pass ;;

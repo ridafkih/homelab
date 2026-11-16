@@ -24,3 +24,16 @@ services:
       ridash-network:
         aliases:
           - rida.sh-bun
+      hyper-admin-network:
+        ipv4_address: ${HYPER_ADMIN_PROXY_ADDRESS:?}
+        gw_priority: 1
+
+networks:
+  hyper-admin-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: ${HYPER_ADMIN_BRIDGE:?}
+    ipam:
+      config:
+        - subnet: ${HYPER_ADMIN_SUBNET:?}
+          gateway: ${HYPER_ADMIN_GATEWAY:?}

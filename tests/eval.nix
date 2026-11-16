@@ -138,6 +138,9 @@ let
     sopsFollowsNixpkgs = (lockedInput "sops-nix").inputs.nixpkgs == [ "nixpkgs" ];
     diskoFollowsNixpkgs = (lockedInput "disko").inputs.nixpkgs == [ "nixpkgs" ];
 
+    hyperAdminOnlyFromCaddy =
+      lib.hasInfix "iptables -I nixos-fw -i br-hyper-admin -s 172.16.39.2 -p tcp --dport 3912 -j nixos-fw-accept" cfg.networking.firewall.extraCommands
+      && !(lib.hasInfix "172.16.0.0/12 -p tcp --dport 3912" cfg.networking.firewall.extraCommands);
     noComments = builtins.all (name: !(lib.hasInfix hashChar (sourceOf name))) ownedSources;
     noShellFallbacks = builtins.all (name: !(lib.hasInfix shellFallback (sourceOf name))) ownedSources;
   };
