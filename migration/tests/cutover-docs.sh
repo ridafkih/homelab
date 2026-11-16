@@ -271,7 +271,7 @@ grep -qiE 'point of no return|first (nixos )?boot' <<<"$(section "$cutover" roll
 require_in_section optional-firewall 'rida' 'optional firewall is not left as Rida'"'"'s choice'
 require_in_section optional-firewall '8006|3389' 'optional firewall does not name the ports it would close'
 cleanup_text=$(section "$cutover" cleanup)
-for file in $(git ls-files -- ':!migration' ':!docs/cutover.md' ':!docs/decisions' | xargs grep -lE '"migration"|(^|[^/[:alnum:]_.-])migration/' 2>/dev/null); do
+for file in $(git ls-files -- ':!migration' ':!docs/cutover.md' | xargs grep -lE '"migration"|(^|[^/[:alnum:]_.-])migration/' 2>/dev/null); do
   grep -qF -- "\`$file\`" <<<"$cleanup_text" || fail "$cutover #cleanup: deleting migration/ leaves a reference in $file that cleanup does not name"
 done
 require_in_section cleanup 'nix flake check' 'cleanup does not run nix flake check before pushing the removal'

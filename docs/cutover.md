@@ -12,7 +12,7 @@ Conventions:
 
 ## The one exception to "the entire box through Mullvad"
 
-Everything on the box, host and containers alike, goes out through Mullvad via the Tailscale exit node, with one exception: the two Cloudflare tunnels (Authentik and rida.sh) connect straight to Cloudflare's tunnel edge. Cloudflare's tunnel edge refuses connections from every Mullvad relay we tested, so a tunnel forced through Mullvad never comes up. Cloudflare already knows this box, because the tunnels log in to it with their tokens, so going direct reveals nothing new. The exception covers only Cloudflare's published tunnel-edge prefixes (`homelab.cloudflareTunnelEdge` in `modules/options.nix`, rule 5200 in `egress-policy`). Everything else fails closed: if tailscaled or the Mullvad exit is down, the kill switch leaves traffic unreachable instead of letting it leak to the ISP ([0006](decisions/0006-whole-box-mullvad-egress.md)).
+Everything on the box, host and containers alike, goes out through Mullvad via the Tailscale exit node, with one exception: the two Cloudflare tunnels (Authentik and rida.sh) connect straight to Cloudflare's tunnel edge. Cloudflare's tunnel edge refuses connections from every Mullvad relay we tested, so a tunnel forced through Mullvad never comes up. Cloudflare already knows this box, because the tunnels log in to it with their tokens, so going direct reveals nothing new. The exception covers only Cloudflare's published tunnel-edge prefixes (`homelab.cloudflareTunnelEdge` in `modules/options.nix`, rule 5200 in `egress-policy`). Everything else fails closed: if tailscaled or the Mullvad exit is down, the kill switch leaves traffic unreachable instead of letting it leak to the ISP.
 
 ## Pre-flight
 
@@ -114,7 +114,7 @@ All on Arch, while it is still serving. Nothing here is destructive.
     rm -rf /var/tmp/homelab-nixos
     ```
 
-    Expected: `docker save` finishes without "No such image" (about 20 GB). This is insurance, not the normal path: NixOS pulls the pinned digests on first start. A save from Arch's image store doesn't keep registry digests, so loading it later needs a `docker tag` per image from `image-tags.txt` and a one-off removal of that service's `@sha256` pin until it can be re-pinned ([0004](decisions/0004-image-pinning.md)). **STOP** if any pinned image is missing locally: the box isn't running what the repo pins.
+    Expected: `docker save` finishes without "No such image" (about 20 GB). This is insurance, not the normal path: NixOS pulls the pinned digests on first start. A save from Arch's image store doesn't keep registry digests, so loading it later needs a `docker tag` per image from `image-tags.txt` and a one-off removal of that service's `@sha256` pin until it can be re-pinned. **STOP** if any pinned image is missing locally: the box isn't running what the repo pins.
 
 11. **Record the Tailscale identity.**
 
@@ -543,7 +543,7 @@ Puts Arch back on the NVMe from the images in `/mnt/disk2/migration/rollback`. I
 
 ## Optional firewall
 
-Not applied. This is Rida's choice: the build keeps today's LAN reachability exactly ([0007](decisions/0007-network-dns-and-firewall.md)). The 2026-10-26 audit suggested closing RDP (3389), the Windows web viewer (8006) and OTLP (4317, 4318, 4327, 4328) to the LAN, leaving them reachable over the tailnet only.
+Not applied. This is Rida's choice: the build keeps today's LAN reachability exactly. The 2026-10-26 audit suggested closing RDP (3389), the Windows web viewer (8006) and OTLP (4317, 4318, 4327, 4328) to the LAN, leaving them reachable over the tailnet only.
 
 Docker publishes those ports itself and its IPv4 forwarding runs before the host firewall's input rules, so removing them from `allowedTCPPorts` alone would only close them on IPv6. The diff does both:
 
@@ -610,7 +610,7 @@ If Rida wants it: apply the diff, update the port list in `tests/dns-firewall.ni
    `tests/secrets-repo.sh` keeps its `':!migration'` exclusion, because the history still holds those files. Before pushing, check that nothing else still points into `migration/` and that the checks pass:
 
    ```sh
-   git grep -nE '"migration"|(^|[^/[:alnum:]_.-])migration/' -- ':!docs/cutover.md' ':!docs/decisions'
+   git grep -nE '"migration"|(^|[^/[:alnum:]_.-])migration/' -- ':!docs/cutover.md'
    nix flake check
    SOPS_AGE_KEY_FILE=<admin-key-file> bash tests/secrets-values.sh
    ```

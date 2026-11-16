@@ -37,7 +37,6 @@ let
     ("cuda" + "Support")
     ("enable" + "Nvidia")
   ];
-  skippedDirs = [ "docs/decisions" ];
   filesUnder = rel:
     let
       dir = if rel == "" then self else self + "/${rel}";
@@ -47,7 +46,7 @@ let
       lib.mapAttrsToList (
         name: type:
         if type == "directory" then
-          (if builtins.elem (join name) skippedDirs then [ ] else filesUnder (join name))
+          filesUnder (join name)
         else if type == "regular" then
           [ (join name) ]
         else

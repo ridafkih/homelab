@@ -108,7 +108,7 @@ for file in secrets/homelab.yaml secrets/vm.yaml; do
   [ -z "$bad_empty" ] || fail "$file leaves keys empty that keys.tsv does not allow: $bad_empty"
 done
 
-git log -p --format= HEAD -- . ':!tests' ':!migration' ':!scripts/tests' ':!docs/decisions' > "$scratch/history.patch"
+git log -p --format= HEAD -- . ':!tests' ':!migration' ':!scripts/tests' > "$scratch/history.patch"
 grep -qE '^\+.*-----BEGIN [A-Z ]*PRIVATE KEY-----' "$scratch/history.patch" && fail "a PEM private key is in history"
 grep -qE '^\+.*hf_[A-Za-z0-9]{30,}' "$scratch/history.patch" && fail "a Hugging Face token is in history"
 
