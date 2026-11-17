@@ -8,7 +8,7 @@ A Ryzen 7 7800X3D with 64 GB of RAM and an RTX 4080 Super, used headless for Jel
 
 ## What runs
 
-NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups, the egress policy and sign-in (Pocket ID and Tinyauth). Everything else is a Docker Compose app under `apps/`:
+NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups, the egress policy, sign-in (Pocket ID and Tinyauth) and a Paper Minecraft server. Everything else is a Docker Compose app under `apps/`:
 
 - `caddy`: reverse proxy and TLS for the `rida.sh` subdomains, with Cloudflare DNS challenges
 - `authentik`: single sign-on, reached from outside through its own Cloudflare tunnel
@@ -88,6 +88,10 @@ Backups are on-disk only, with restic, every night at 03:30. There is no off-sit
 Both also hold `/etc`, `/root`, the checkout and its app data, Tailscale's, Pocket ID's and Tinyauth's state, a few Docker volumes and nightly dumps of the Authentik, Pocket ID, Seafile and OpenSEO databases. The media library (`/data/media`) is never backed up: if it goes, it goes. The Windows VM disk is excluded too.
 
 Restoring files, Seafile and the databases is in [docs/restore.md](./docs/restore.md).
+
+## Minecraft
+
+`modules/minecraft.nix` runs a Paper server for Java Edition on port 25565, open on the tailnet only. It runs in online mode with an enforced whitelist; to let someone in, add their username and UUID to `players` and switch. The world lives in `/var/lib/minecraft` and is capped by `max-world-size`. Every day at 10:00 UTC `minecraft-backup` flushes the world, archives it to `/mnt/disk1/backup/minecraft` and keeps the newest seven. To restore one, stop `minecraft-server`, unpack the archive into `/var/lib/minecraft` as the `minecraft` user and start it again.
 
 ## Egress
 
