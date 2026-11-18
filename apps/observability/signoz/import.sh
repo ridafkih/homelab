@@ -4,9 +4,9 @@ set -euo pipefail
 : "${SIGNOZ_URL:?set SIGNOZ_URL to the SigNoz base URL}"
 : "${SIGNOZ_API_KEY:?set SIGNOZ_API_KEY to an admin service-account key}"
 
-readonly logs_days=30
-readonly traces_hours=720
-readonly metrics_hours=2160
+readonly logs_days=365
+readonly traces_hours=8760
+readonly metrics_hours=8760
 dashboards_dir="$(cd -- "$(dirname -- "$0")" && pwd)/dashboards"
 readonly dashboards_dir
 
