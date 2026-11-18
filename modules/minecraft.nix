@@ -41,12 +41,23 @@ let
     "-XX:SurvivorRatio=32"
   ];
 
+  plugins = {
+    Back = pkgs.fetchurl {
+      url = "https://cdn.modrinth.com/data/eKlFGPMY/versions/8pC8l1Hx/Back-1.2.2.jar";
+      sha256 = "e02b5e05f4a1f269b6effc197eea4b843d292183a797fce5771b2a0441e9ce27";
+    };
+  };
+
   bukkitSettings = {
     settings.connection-throttle = -1;
   };
 
   dataDir = "/var/lib/minecraft";
   console = config.systemd.sockets.minecraft-server.socketConfig.ListenFIFO;
+
+  linkPlugins = lib.concatStrings (lib.mapAttrsToList (name: jar: ''
+    ln -sfn ${jar} plugins/${name}.jar
+  '') plugins);
 
   bukkitOverrides = pkgs.writeText "bukkit-overrides.json" (builtins.toJSON bukkitSettings);
   yq = lib.getExe pkgs.yq-go;
@@ -109,6 +120,9 @@ in
     };
 
     systemd.services.minecraft-server.preStart = lib.mkAfter ''
+      install -d -m 0700 plugins
+      find plugins -maxdepth 1 -type l -lname '/nix/store/*' -delete
+      ${linkPlugins}
       [ -e bukkit.yml ] || echo '{}' > bukkit.yml
       ${yq} -i '. *= (load("${bukkitOverrides}") | ... style="")' bukkit.yml
     '';

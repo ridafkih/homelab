@@ -24,6 +24,7 @@ let
     paperOnJava25 = lib.hasInfix "openjdk-headless-25" server.package.installPhase;
     heapBounded = lib.hasInfix "-Xmx${cfg.homelab.minecraft.heap}" server.jvmOpts && cfg.systemd.services.minecraft-server.serviceConfig.MemoryMax == "9G";
     backupsRotate = cfg.homelab.minecraft.backupsKept == 7 && lib.hasPrefix "/mnt/disk" cfg.homelab.minecraft.backupDir;
+    backPluginLinked = lib.hasInfix "Back-1.2.2.jar plugins/Back.jar" cfg.systemd.services.minecraft-server.preStart;
     bukkitThrottleOff = lib.hasInfix "bukkit-overrides.json" cfg.systemd.services.minecraft-server.preStart;
     backupTimer = cfg.systemd.timers.minecraft-backup.wantedBy == [ "timers.target" ];
   };
