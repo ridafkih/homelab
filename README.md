@@ -91,7 +91,7 @@ Restoring files, Seafile and the databases is in [docs/restore.md](./docs/restor
 
 ## Minecraft
 
-`modules/minecraft.nix` runs a Paper server for Java Edition on port 25565, open on the tailnet only. It runs in online mode with an enforced whitelist; to let someone in, add their username and UUID to `players` and switch. The world lives in `/var/lib/minecraft` and is capped by `max-world-size`. Every day at 10:00 UTC `minecraft-backup` flushes the world, archives it to `/mnt/disk1/backup/minecraft` and keeps the newest seven. To restore one, stop `minecraft-server`, unpack the archive into `/var/lib/minecraft` as the `minecraft` user and start it again.
+`modules/minecraft.nix` runs a Paper server for Java Edition on port 25565, open on the tailnet only. It runs in online mode with an enforced whitelist; to let someone in, add their username and UUID to `players` and switch. The world lives in `/var/lib/minecraft` and is capped by `max-world-size`. Before every start the module links the pinned jars in `plugins` into `/var/lib/minecraft/plugins` (Back gives everyone `/back` to their last death) and merges `bukkitSettings` into `bukkit.yml`, which keeps the connection throttle off; hand edits to those keys don't survive a restart. Every day at 10:00 UTC `minecraft-backup` flushes the world, archives it to `/mnt/disk1/backup/minecraft` and keeps the newest seven. To restore one, stop `minecraft-server`, unpack the archive into `/var/lib/minecraft` as the `minecraft` user and start it again.
 
 ## Egress
 
