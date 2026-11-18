@@ -46,7 +46,7 @@ exporters:
       enabled: true
       initial_interval: 1s
       max_interval: 30s
-      max_elapsed_time: 10m
+      max_elapsed_time: 0
 
 service:
   extensions: [bearertokenauth, health_check]
