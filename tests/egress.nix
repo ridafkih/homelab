@@ -19,9 +19,13 @@ let
   edge = homelabDefaults.cloudflareTunnelEdge;
   r2 = homelabDefaults.cloudflareR2Endpoint;
 
+  exitPreferences = [ { countryCode = "CA"; cityCode = "VAN"; } { countryCode = "US"; } ];
+  exitPreferencesModule = lib.optionalAttrs modulesPresent { homelab.egress.mullvadExitPreferences = exitPreferences; };
+
   evalWith = extra: lib.nixosSystem {
     modules = [
       { nixpkgs.hostPlatform = "x86_64-linux"; system.stateVersion = "26.05"; }
+      exitPreferencesModule
       optionsModule
       networkModule
     ]
@@ -64,6 +68,14 @@ let
     mullvadExitService = modulesPresent && cfg.systemd.services ? mullvad-exit;
     mullvadExitStartsWithTailscaled = modulesPresent && builtins.elem "tailscaled.service" (cfg.systemd.services.mullvad-exit.wantedBy or [ ]) && builtins.elem "tailscaled.service" (cfg.systemd.services.mullvad-exit.after or [ ]);
     mullvadExitTimer = modulesPresent && (cfg.systemd.timers.mullvad-exit.timerConfig.OnUnitActiveSec or null) == "1min";
+    mullvadExitGetsPreferences = modulesPresent && lib.hasSuffix "-mullvad-exit-preferences.json" (cfg.systemd.services.mullvad-exit.serviceConfig.ExecStart or "");
+    mullvadExitPreferencesRequired = modulesPresent && !(hostOpts.homelab.egress.mullvadExitPreferences ? default);
+    hostPrefersVancouverThenSeattle = hostCfg.homelab.egress.mullvadExitPreferences == [
+      { countryCode = "CA"; cityCode = "VAN"; }
+      { countryCode = "US"; cityCode = "SEA"; }
+      { countryCode = "CA"; cityCode = null; }
+      { countryCode = "US"; cityCode = null; }
+    ];
     mullvadExitOffWhenEgressDisabled = modulesPresent && !(disabled.systemd.services ? mullvad-exit) && !(disabled.systemd.timers ? mullvad-exit);
     tailscaleNoAuthKey = modulesPresent && ts.authKeyFile == null;
     tailscaleMtu = modulesPresent && (cfg.systemd.services.tailscaled.environment.TS_DEBUG_MTU or null) == "1500";
@@ -125,7 +137,7 @@ let
     name = "egress";
 
     nodes.homelab = { ... }: {
-      imports = [ optionsModule networkModule tailscaleModule egressModule ];
+      imports = [ optionsModule networkModule tailscaleModule egressModule exitPreferencesModule ];
       virtualisation.memorySize = 2048;
       virtualisation.cores = 2;
       virtualisation.vlans = [ ];

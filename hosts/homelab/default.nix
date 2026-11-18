@@ -45,6 +45,13 @@ in
     };
   };
 
+  homelab.egress.mullvadExitPreferences = [
+    { countryCode = "CA"; cityCode = "VAN"; }
+    { countryCode = "US"; cityCode = "SEA"; }
+    { countryCode = "CA"; }
+    { countryCode = "US"; }
+  ];
+
   security.sudo.wheelNeedsPassword = false;
 
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) config.homelab.unfreeAllow;
