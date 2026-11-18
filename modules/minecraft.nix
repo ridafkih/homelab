@@ -41,8 +41,15 @@ let
     "-XX:SurvivorRatio=32"
   ];
 
+  bukkitSettings = {
+    settings.connection-throttle = -1;
+  };
+
   dataDir = "/var/lib/minecraft";
   console = config.systemd.sockets.minecraft-server.socketConfig.ListenFIFO;
+
+  bukkitOverrides = pkgs.writeText "bukkit-overrides.json" (builtins.toJSON bukkitSettings);
+  yq = lib.getExe pkgs.yq-go;
 
   backup = pkgs.writeShellApplication {
     name = "minecraft-backup";
@@ -100,6 +107,11 @@ in
         enable-jmx-monitoring = false;
       };
     };
+
+    systemd.services.minecraft-server.preStart = lib.mkAfter ''
+      [ -e bukkit.yml ] || echo '{}' > bukkit.yml
+      ${yq} -i '. *= (load("${bukkitOverrides}") | ... style="")' bukkit.yml
+    '';
 
     systemd.services.minecraft-server.serviceConfig = {
       Nice = 5;
