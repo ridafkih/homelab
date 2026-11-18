@@ -137,7 +137,7 @@ systemctl start openseo-compose
 
 ## Docker volumes
 
-Only four volumes are backed up as files: `homelab_signoz-sqlite` (SigNoz users, dashboards, alerts and keys), `homelab_grafana-funnel` (the OTLP funnel's Tailscale identity), and `homelab_grafana` and `grafana_grafana-data`, left from the retired Grafana. The database volumes come back from the dumps above. Stop whatever uses the volume, restore it in place and start it again:
+Only four volumes are backed up as files: `homelab_signoz-sqlite` (SigNoz users, dashboards, alerts and keys), `homelab_grafana-funnel` (the OTLP funnel's Tailscale identity), and `homelab_grafana` and `grafana_grafana-data`, left from the retired Grafana. The database volumes come back from the dumps above. SigNoz's ClickHouse data in `/mnt/disk1/signoz/clickhouse` is telemetry and isn't backed up; after a loss, ClickHouse starts empty in a new directory there owned by uid 101. Stop whatever uses the volume, restore it in place and start it again:
 
 ```bash
 docker stop signoz

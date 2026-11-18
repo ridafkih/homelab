@@ -94,8 +94,12 @@ services:
       - ./config/signoz/clickhouse-users.xml:/etc/clickhouse-server/users.xml:ro
       - ./config/signoz/clickhouse-custom-function.xml:/etc/clickhouse-server/custom-function.xml:ro
       - ./config/signoz/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - type: bind
+        source: ${SIGNOZ_CLICKHOUSE_PATH:?}
+        target: /var/lib/clickhouse
+        bind:
+          create_host_path: false
       - signoz-clickhouse-scripts:/var/lib/clickhouse/user_scripts
-      - signoz-clickhouse:/var/lib/clickhouse
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
       interval: 30s
@@ -192,8 +196,6 @@ services:
 
 volumes:
   grafana-funnel:
-    driver: local
-  signoz-clickhouse:
     driver: local
   signoz-clickhouse-scripts:
     driver: local

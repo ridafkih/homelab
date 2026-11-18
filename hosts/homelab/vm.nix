@@ -59,6 +59,13 @@ let
     options = [ "defaults" "nofail" "noatime" "x-systemd.device-timeout=15s" ];
   };
 
+  committedEnv = lib.listToAttrs (
+    map
+      (line: let parts = lib.splitString "=" line; in lib.nameValuePair (builtins.head parts) (lib.concatStringsSep "=" (builtins.tail parts)))
+      (builtins.filter (line: line != "") (lib.splitString "\n" (builtins.readFile ../../homelab.env)))
+  );
+  clickhouseDir = committedEnv.SIGNOZ_CLICKHOUSE_PATH;
+
   emptyDisk = serial: {
     size = 20480;
     driveConfig.deviceExtraOpts.serial = serial;
@@ -508,6 +515,18 @@ in
             Type = "oneshot";
             RemainAfterExit = true;
             ExecStart = lib.getExe checkoutScript;
+          };
+        };
+
+        homelab-vm-clickhouse-dir = {
+          description = "Create SigNoz's ClickHouse directory on the empty test disk";
+          requiredBy = [ "homelab-compose.service" ];
+          before = [ "homelab-compose.service" ];
+          unitConfig.RequiresMountsFor = [ clickhouseDir ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = "${pkgs.coreutils}/bin/install -d -o 101 -g 101 -m 0750 ${clickhouseDir}";
           };
         };
 

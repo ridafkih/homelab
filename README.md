@@ -17,7 +17,7 @@ NixOS runs the host: networking, Tailscale, the NVIDIA driver, storage, backups,
 - `media`: Prowlarr, Sonarr, Radarr, Bazarr, qBittorrent, qui and Jellyseerr
 - `seafile`: file sync and sharing, with SeaDoc
 - `open-webui`: Open WebUI
-- `observability`: SigNoz, fed by an OpenTelemetry Collector behind a Tailscale Funnel for OTLP
+- `observability`: SigNoz, fed by an OpenTelemetry Collector behind a Tailscale Funnel for OTLP; ClickHouse keeps a year of telemetry on `/mnt/disk1/signoz/clickhouse`
 - `ridash`: the Cloudflare tunnel for `rida.sh`
 - `openseo`: OpenSEO, as its own Compose project
 - `windows`: a Windows 11 VM, as its own Compose project
