@@ -14,6 +14,7 @@ let
     whitelistUuids = builtins.all (uuid: builtins.match uuidPattern uuid != null) (builtins.attrValues server.whitelist);
     noRcon = !props.enable-rcon;
     noQuery = !props.enable-query;
+    pausesWhenEmpty = props.pause-when-empty-seconds == 60;
     portOnlyOnTailnet =
       !server.openFirewall
       && !(builtins.elem port firewall.allowedTCPPorts)

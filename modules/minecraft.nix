@@ -116,6 +116,7 @@ in
         enable-query = false;
         enable-status = true;
         enable-jmx-monitoring = false;
+        pause-when-empty-seconds = 60;
       };
     };
 
